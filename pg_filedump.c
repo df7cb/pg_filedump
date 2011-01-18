@@ -767,8 +767,10 @@ FormatItem (unsigned int numBytes, unsigned int startIndex,
 		  "  Has Nulls: %u  Has Varwidths: %u\n\n",
 		  ((uint32) ((itup->t_tid.ip_blkid.bi_hi << 16) |
 			     (uint16) itup->t_tid.ip_blkid.bi_lo)),
-		  itup->t_tid.ip_posid, (int) IndexTupleSize (itup),
-		  IndexTupleHasNulls (itup), IndexTupleHasVarwidths (itup));
+		  itup->t_tid.ip_posid,
+		  (int) IndexTupleSize(itup),
+		  IndexTupleHasNulls(itup) ? 1 : 0,
+		  IndexTupleHasVarwidths(itup) ? 1 : 0);
 
 	  if (numBytes != IndexTupleSize (itup))
 	    printf ("  Error: Item size difference. Given <%u>, "
