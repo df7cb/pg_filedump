@@ -1,20 +1,21 @@
-pg_filedump - Display formatted contents of a PostgreSQL heap/index/control
-              file. 
+pg_filedump - Display formatted contents of a PostgreSQL heap, index,
+              or control file.
 
 Copyright (c) 2002-2010 Red Hat, Inc.
+Copyright (c) 2011, PostgreSQL Global Development Group
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.
 
-Author: Patrick Macdonald  <patrickm@redhat.com>
+Original Author: Patrick Macdonald <patrickm@redhat.com>
 
-Version: 9.0.0
 
-Overview:
 ------------------------------------------------------------------------
-pg_filedump is a utility to format PostgreSQL heap/index/control files 
+Overview:
+
+pg_filedump is a utility to format PostgreSQL heap/index/control files
 into a human-readable form.  You can format/dump the files several ways,
 as listed in the Invocation section, as well as dumping straight binary.
 
@@ -22,63 +23,40 @@ The type of file (heap/index) can usually be determined automatically
 by the content of the blocks within the file.  However, to format a
 pg_control file you must use the -c option.
 
-The default is to format the entire file using the block size listed on
-block 0 (heap/index files) and display block relative addresses.  These
-defaults can be modified using run-time options.   
+The default is to format the entire file using the block size listed in
+block 0 and display block relative addresses.  These defaults can be
+modified using run-time options.
 
 Some options may seem strange but they're there for a reason.  For
 example, block size.  It's there because if the header of block 0 is
-corrupt, you need a method of forcing a block size.  
+corrupt, you need a method of forcing a block size.
 
 
-Release  Notes / Databases Supported
------------------------------------------------------------------------
-  V9.0.0 Must be compiled against a PostgreSQL 9.0 installation.
-         Supports: PostgreSQL 9.0.x
-
-  V8.4.0 Must be compiled against a PostgreSQL 8.4 installation.
-         Supports: PostgreSQL 8.4.x
-
-  V8.3.0 Must be compiled against a PostgreSQL 8.3 installation.
-         Supports: PostgreSQL 8.3.x
-
-  V8.2.0 Must be compiled against a PostgreSQL 8.2 installation.
-         Supports: PostgreSQL 8.2.x
-
-  V8.1.1 Must be compiled against a PostgreSQL 8.1 installation.
-         Supports: PostgreSQL 8.1.x
-
-  V4.0   Must be compiled against a PostgreSQL 8.0 installation.
-         Supports: PostgreSQL 8.0.x
-
-  V3.0   Must be compiled against a PostgreSQL 7.4 installation.
-         Supports: PostgreSQL 7.4.x 
-
-  V2.0   Must be compiled against a PostgreSQL 7.3 installation.
-         Supports: PostgreSQL - Red Hat Edition 3.0,
-                   Red Hat Database 2.x, Red Hat Database 1.x
-                   PostgreSQL 7.3.x, PostgreSQL 7.2.x, PostgreSQL 7.1.x
-
-  V1.0   Must be compiled against a PostgreSQL 7.1 or PostgreSQL 7.2
-         installation.
-         Supports: Red Hat Database 2.x, Red Hat Database 1.x
-                   PostgreSQL 7.2.x, PostgreSQL 7.1.x
-
-
-Compile/Installation:
 ------------------------------------------------------------------------
+Compile/Installation:
+
+To compile pg_filedump, you will need to have a properly configured
+PostgreSQL source tree for the appropriate PostgreSQL major version.
+
 There are two makefiles included in this package.  Makefile is a
-standalone makefile for pg_filedump.  Alter the include and src 
-variables to point to the proper directories.  Makefile.contrib can be
-used if the package was untarred in the contrib directory of a 
-PostgreSQL build tree.
+standalone makefile for pg_filedump.  Alter the PGSQL variable to point
+to the PostgreSQL source tree.  Makefile.contrib can be used if this
+package was untarred in the contrib directory of a PostgreSQL build tree.
 
   make
   make install (if in the contrib directory)
 
+It is also possible to use Makefile.contrib without being in the contrib
+directory:
 
+  make -f Makefile.contrib USE_PGXS=1
+
+This will not eliminate the need to have a complete source tree, though.
+
+
+------------------------------------------------------------------------
 Invocation:
------------------------------------------------------------------------- 
+
 pg_filedump [-abcdfhixy] [-R startblock [endblock]] [-S blocksize] file
 
 Defaults are: relative addressing, range of the entire file, block size

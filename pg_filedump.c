@@ -1,9 +1,9 @@
 /*
  * pg_filedump.c - PostgreSQL file dump utility for dumping and
  *                 formatting heap (data), index and control files.
- *                 Version 9.0.0 for PostgreSQL 9.0
  *
- * Copyright (c) 2002-2010 Red Hat, Inc. All rights reserved.
+ * Copyright (c) 2002-2010 Red Hat, Inc.
+ * Copyright (c) 2011, PostgreSQL Global Development Group
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,10 +19,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Author: Patrick Macdonald <patrickm@redhat.com> 
- *
- * Component of: PostgreSQL - Red Hat Edition - Utilities / Tools
- *
+ * Original Author: Patrick Macdonald <patrickm@redhat.com> 
  */
 
 #include "pg_filedump.h"
@@ -63,12 +60,15 @@ DisplayOptions (unsigned int validOptions)
 {
   if (validOptions == OPT_RC_COPYRIGHT)
     printf
-      ("\nVersion 9.0.0 (PostgreSQL 9.0)  Copyright (c) 2002-2010 Red Hat, Inc.\n");
+      ("\nVersion %s (for %s)"
+       "\nCopyright (c) 2002-2010 Red Hat, Inc."
+       "\nCopyright (c) 2011, PostgreSQL Global Development Group\n",
+       FD_VERSION, FD_PG_VERSION);
 
   printf
     ("\nUsage: pg_filedump [-abcdfhixy] [-R startblock [endblock]] [-S blocksize] file\n\n"
      "Display formatted contents of a PostgreSQL heap/index/control file\n"
-     " Defaults are: relative addressing, range of the entire file, block\n"
+     "Defaults are: relative addressing, range of the entire file, block\n"
      "               size as listed on block 0 in the file\n\n"
      "The following options are valid for heap and index files:\n"
      "  -a  Display absolute addresses when formatting (Block header\n"
@@ -91,7 +91,7 @@ DisplayOptions (unsigned int validOptions)
      "  -c  Interpret the file listed as a control file\n"
      "  -f  Display formatted content dump along with interpretation\n"
      "  -S  Force block size to [blocksize]\n"
-     "\nReport bugs to <rhdb@sources.redhat.com>\n");
+     "\nReport bugs to <pgsql-bugs@postgresql.org>\n");
 }
 
 // Iterate through the provided options and set the option flags.
@@ -528,12 +528,13 @@ CreateDumpFileHeader (int numOptions, char **options)
 
   printf
     ("\n*******************************************************************\n"
-     "* PostgreSQL File/Block Formatted Dump Utility - Version 9.0.0\n*\n"
+     "* PostgreSQL File/Block Formatted Dump Utility - Version %s\n"
+     "*\n"
      "* File: %s\n"
      "* Options used: %s\n*\n"
      "* Dump created on: %s"
      "*******************************************************************\n",
-     fileName, (strlen (optionBuffer)) ? optionBuffer : "None",
+     FD_VERSION, fileName, (strlen (optionBuffer)) ? optionBuffer : "None",
      ctime (&rightNow));
 }
 

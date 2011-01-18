@@ -1,9 +1,9 @@
 /*
  * pg_filedump.h - PostgreSQL file dump utility for dumping and
  *                 formatting heap (data), index and control files.
- *                 Version 9.0.0 for PostgreSQL 9.0
  * 
- * Copyright (c) 2002-2010 Red Hat, Inc. All rights reserved.
+ * Copyright (c) 2002-2010 Red Hat, Inc.
+ * Copyright (c) 2011, PostgreSQL Global Development Group
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,25 +19,25 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Author: Patrick Macdonald <patrickm@redhat.com> 
- *
- * Component of: PostgreSQL - Red Hat Edition - Utilities / Tools
- * 
+ * Original Author: Patrick Macdonald <patrickm@redhat.com> 
  */
 
-#include <stdio.h>
+#define FD_VERSION	"9.0.0"			/* version ID of pg_filedump */
+#define FD_PG_VERSION	"PostgreSQL 9.0.x"	/* PG version it works with */
+
+#include "postgres.h"
+
 #include <time.h>
 #include <ctype.h>
 
-#include "postgres.h"
-#include "storage/bufpage.h"
-#include "access/hash.h"
 #include "access/gin.h"
 #include "access/gist.h"
-#include "access/nbtree.h"
-#include "access/itup.h"
+#include "access/hash.h"
 #include "access/htup.h"
+#include "access/itup.h"
+#include "access/nbtree.h"
 #include "catalog/pg_control.h"
+#include "storage/bufpage.h"
 
 // Options for Block formatting operations
 static unsigned int blockOptions = 0;
