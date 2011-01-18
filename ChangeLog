@@ -1,0 +1,174 @@
+2010-12-29  Tom Lane <tgl@redhat.com>
+
+	* pg_filedump.c, .h: Update version and copyright date for
+	  PostgreSQL 9.0 (there aren't any on-disk layout changes in 9.0).
+
+2009-07-08  Tom Lane <tgl@redhat.com>
+
+	* pg_filedump.c: Update for changes in pg_control contents in
+	  PostgreSQL 8.4.
+	* pg_filedump.c, .h: Update version and copyright date.
+
+2008-02-08  Tom Lane <tgl@redhat.com>
+
+	* pg_filedump.c: Updates for various representation changes in
+	  PostgreSQL 8.3; in particular there is finally a trustworthy way
+	  to tell apart the various types of index special space.
+	* pg_filedump.c, .h: Update version and copyright date.
+
+2007-02-14  Tom Lane <tgl@redhat.com>
+
+	* pg_filedump.c, .h: Remove rtree support (gone in PostgreSQL 8.2)
+	  and add GIN support.  Other updates for changes in index special
+	  section contents in 8.2.
+	* pg_filedump.c: Repair old bug that misreported header length by
+	  4 bytes.
+	* pg_filedump.c, .h: Update version and copyright date.
+
+2005-11-21  Tom Lane <tgl@redhat.com>
+
+	* pg_filedump.c, .h: Adjust to support PostgreSQL 8.1 tuple format
+	  and control file layout.
+	* pg_filedump.c, .h: Update version and copyright date.
+	* Makefile.contrib: Update for PGXS changes.
+
+2005-02-10  Tom Lane <tgl@redhat.com>
+
+	* pg_filedump.c, .h: Adjust to support PostgreSQL 8.0 tuple format.
+	* pg_filedump.c, .h: Update version and copyright date.
+
+2003-09-29  Patrick Macdonald  <patrickm@redhat.com>
+
+	* pg_filedump.c (GetSpecialSectionType): Distinguish between btree and
+	  hash index pages using the hasho_filler field.
+	  (FormatHeader): Verify index page header is btree before dumping meta
+	  data.
+	  (FormatSpecial): Format index areas based on precalculated special
+	  section type.
+	* pg_filedump.h: Add distinct index special section types.
+
+2003-05-30  Patrick Macdonald  <patrickm@redhat.com>
+
+	* pg_filedump.c: Bumped version up to 3.0.
+
+2003-04-17  Patrick Macdonald  <patrickm@redhat.com>
+
+	* pg_filedump.c (DisplayOptions): Update version and copyright
+	  date.
+	  (FormatHeader): Display btree meta data as part of the header
+	  if this is a btree meta page.
+	  (FormatItem): Remove older version defines.
+	  (FormatSpecial): Add new btree defines.
+	  (FormatControl): Remove older version defines.
+	* pg_filedump.h: Update version and copyright date, remove older
+	  version structure defines.
+
+2003-04-17  Patrick Macdonald  <patrickm@redhat.com>
+
+	* pg_filedump.c: Updated header, copyright and indentation.
+	* pg_filedump.h: ditto.
+
+2002-12-18  Patrick Macdonald  <patrickm@redhat.com>
+
+	* pg_filedump.c: Version 1.1 of the tool, moved
+	  declarations to proper header,
+	  (GetBlockSize): Cache block size locally,
+	  (CreateDumpFileHeader): Increment the release minor,
+	  (FormatHeader): Add block version number to output,
+	  (FormatItem): Support new heap tuple layout,
+	  (FormatControl): Support additional entries in the
+	  control file.
+	* pg_filedump.h: New file.
+	* README.pg_filedump: Updated for version control.
+	
+2002-10-16  Patrick Macdonald  <patrickm@redhat.com>
+
+	* rhdb-utils.build: Updated branch level.
+
+2002-09-24  Andrew Overholt  <overholt@redhat.com>
+
+	* rhdb-utils.build: Change cvsroot to reflect new server.
+
+2002-09-11  Andrew Overholt  <overholt@redhat.com>
+
+	* rhdb-utils.spec: Change release number to 1.
+
+2002-07-29  Liam Stewart  <liams@redhat.com>
+
+	* rhdb-utils.build: Tightened the cvs module so checkouts don't
+	take forever.
+	(get_cvs): Checkout instead of export.
+	(build): Call build_srpm to build SRPM.
+
+2002-07-10  Liam Stewart  <liams@redhat.com>
+
+	* rhdb-utils.build (build): Use rpmbuild instead of rpm; ignore
+	dependencies.
+
+2002-07-08  Liam Stewart  <liams@redhat.com>
+
+	* rhdb-utils.spec: Updated summary and description text. Bumped
+	release.
+
+2002-07-04  Liam Stewart  <liams@redhat.com>
+
+	* rhdb-utils.build: $download -> $downloaddir
+	* rhdb-utils.spec: New file.
+	* rhdb-utils.build: New file.
+	* rpm-extras/pg_filedump-crc.patch: New file.
+	* rpm-extras/pg_filedump-make.patch: New file.
+
+2002-03-08  Patrick Macdonald  <patrickm@redhat.com>
+
+	* pg_filedump.c (FormatItem): Remove EXTENDED,
+	  add XMAX_COMMITED and XMAX_INVALID, add proper
+ 	  t_bits[] processing, fix typo.
+	* Makefile.contrib: New file.
+
+2002-03-04  Patrick Macdonald  <patrickm@redhat.com>
+
+	* README.pg_filedump: sources merge.
+
+2002-02-04  Patrick Macdonald  <patrickm@redhat.com>
+
+	* pg_filedump.c: Add macro to set options and
+	  flag duplicates, move copyright out of the
+	  header block, use MAXALIGN when determining
+	  special section size
+	* README.pg_filedump: New file.
+
+2002-02-01  Patrick Macdonald  <patrickm@redhat.com>
+	
+	* pg_filedump.c: Alter copyright info to GPL.
+	* pg_filedump.c: Minor tweaks to printf() formatting,
+	  (FormatItem): Add new parameter to receive the 
+	  formatting method.
+	  (FormatItemBlock): Determine and pass the format
+	  method to FormatItem().
+
+2002-01-30  Patrick Macdonald  <patrickm@redhat.com>
+
+	* pg_filedump.c: Added -B to valid control file
+	  dump options.
+	* Makefile: Add -Wmissing-prototypes and
+	  -Wmissing-declarations.
+
+2002-01-29  Patrick Macdonald  <patrickm@redhat.com>
+
+	* pg_filedump.c: Renamed from pgfiledump.c
+
+2002-01-29  Patrick Macdonald  <patrickm@redhat.com>
+
+	* pgfiledump.c: Scrubbed the code, added support
+ 	  for CRC checking, improved readability, fixed
+	  unsigned vs signed problems.
+	* Makefile: Added pg_crc.c to support CRC checks.
+
+2002-01-28  Patrick Macdonald  <patrickm@redhat.com>
+
+	* pgfiledump.c: Added FormatControl() to support
+	  dumping of the PostgreSQL control file.
+
+2002-01-25  Patrick Macdonald  <patrickm@redhat.com>
+
+	* Makefile, pgfiledump.c:  New file.

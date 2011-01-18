@@ -1,0 +1,20 @@
+PROGRAM = pg_filedump
+OBJS	= pg_filedump.o pg_crc.o 
+
+EXTRA_CLEAN = pg_crc.c 
+
+DOCS = README.pg_filedump
+
+ifdef USE_PGXS
+PG_CONFIG = pg_config
+PGXS := $(shell $(PG_CONFIG) --pgxs)
+include $(PGXS)
+else
+subdir = contrib/pg_filedump
+top_builddir = ../..
+include $(top_builddir)/src/Makefile.global
+include $(top_srcdir)/contrib/contrib-global.mk
+endif
+
+pg_crc.c: $(top_srcdir)/src/backend/utils/hash/pg_crc.c
+	rm -f $@ && $(LN_S) $< .
