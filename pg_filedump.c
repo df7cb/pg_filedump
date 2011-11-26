@@ -583,6 +583,8 @@ FormatHeader (Page page)
 	  strcat (flagString, "HAS_FREE_LINES|");
       if (pageHeader->pd_flags & PD_PAGE_FULL)
 	  strcat (flagString, "PAGE_FULL|");
+      if (pageHeader->pd_flags & PD_ALL_VISIBLE)
+	  strcat (flagString, "ALL_VISIBLE|");
       if (strlen (flagString))
 	  flagString[strlen (flagString) - 1] = '\0';
 
@@ -1000,6 +1002,8 @@ FormatSpecial ()
 	  strcat (flagString, "DELETED|");
 	if (gistSection->flags & F_TUPLES_DELETED)
 	  strcat (flagString, "TUPLES_DELETED|");
+	if (gistSection->flags & F_FOLLOW_RIGHT)
+	  strcat (flagString, "FOLLOW_RIGHT|");
 	if (strlen (flagString))
 	  flagString[strlen (flagString) - 1] = '\0';
 	printf (" GIST Index Section:\n"
@@ -1022,6 +1026,12 @@ FormatSpecial ()
 	  strcat (flagString, "LEAF|");
 	if (ginSection->flags & GIN_DELETED)
 	  strcat (flagString, "DELETED|");
+	if (ginSection->flags & GIN_META)
+	  strcat (flagString, "META|");
+	if (ginSection->flags & GIN_LIST)
+	  strcat (flagString, "LIST|");
+	if (ginSection->flags & GIN_LIST_FULLROW)
+	  strcat (flagString, "FULLROW|");
 	if (strlen (flagString))
 	  flagString[strlen (flagString) - 1] = '\0';
 	printf (" GIN Index Section:\n"

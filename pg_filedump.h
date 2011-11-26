@@ -22,8 +22,8 @@
  * Original Author: Patrick Macdonald <patrickm@redhat.com> 
  */
 
-#define FD_VERSION	"9.0.0"			/* version ID of pg_filedump */
-#define FD_PG_VERSION	"PostgreSQL 9.0.x"	/* PG version it works with */
+#define FD_VERSION	"9.1.0"			/* version ID of pg_filedump */
+#define FD_PG_VERSION	"PostgreSQL 9.1.x"	/* PG version it works with */
 
 #include "postgres.h"
 
@@ -31,6 +31,7 @@
 #include <ctype.h>
 
 #include "access/gin.h"
+#include "access/gin_private.h"
 #include "access/gist.h"
 #include "access/hash.h"
 #include "access/htup.h"
