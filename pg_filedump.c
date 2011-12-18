@@ -286,7 +286,7 @@ ConsumeOptions (int numOptions, char **options)
 		  SET_OPTION (itemOptions, ITEM_DETAIL, 'i');
 		  break;
 
-		  // Interpret items as index values
+		  // Interpret items as standard index values
 		case 'x':
 		  SET_OPTION (itemOptions, ITEM_INDEX, 'x');
 		  if (itemOptions & ITEM_HEAP)
@@ -434,20 +434,29 @@ GetSpecialSectionType (Page page)
 	rc = SPEC_SECT_ERROR_BOUNDARY;
       else
 	{
+	  // we may need to examine last 2 bytes of page to identify index
+	  uint16 *ptype = (uint16 *) (buffer + blockSize - sizeof(uint16));
+
 	  specialSize = blockSize - specialOffset;
 
 	  // If there is a special section, use its size to guess its 
-	  // contents
+	  // contents, checking the last 2 bytes of the page in cases
+	  // that are ambiguous.  Note we don't attempt to dereference
+	  // the pointers without checking bytesToFormat == blockSize.
 	  if (specialSize == 0)
 	    rc = SPEC_SECT_NONE;
 	  else if (specialSize == MAXALIGN (sizeof (uint32)))
 	    {
-	      // If MAXALIGN is 8, this could be either a sequence or GIN
+	      // If MAXALIGN is 8, this could be either a sequence or
+	      // SP-GiST or GIN.
 	      if (bytesToFormat == blockSize)
 		{
 		  specialValue = *((int *) (buffer + specialOffset));
 		  if (specialValue == SEQUENCE_MAGIC)
 		    rc = SPEC_SECT_SEQUENCE;
+		  else if (specialSize == MAXALIGN (sizeof (SpGistPageOpaqueData)) &&
+			   *ptype == SPGIST_PAGE_ID)
+		      rc = SPEC_SECT_INDEX_SPGIST;
 		  else if (specialSize == MAXALIGN (sizeof (GinPageOpaqueData)))
 		    rc = SPEC_SECT_INDEX_GIN;
 		  else
@@ -456,6 +465,12 @@ GetSpecialSectionType (Page page)
 	      else
 		rc = SPEC_SECT_ERROR_UNKNOWN;
 	    }
+	  // SP-GiST and GIN have same size special section, so check
+	  // the page ID bytes first.
+	  else if (specialSize == MAXALIGN (sizeof (SpGistPageOpaqueData)) &&
+		   bytesToFormat == blockSize &&
+		   *ptype == SPGIST_PAGE_ID)
+	      rc = SPEC_SECT_INDEX_SPGIST;
 	  else if (specialSize == MAXALIGN (sizeof (GinPageOpaqueData)))
 	      rc = SPEC_SECT_INDEX_GIN;
 	  else if (specialSize > 2 && bytesToFormat == blockSize)
@@ -463,15 +478,13 @@ GetSpecialSectionType (Page page)
 	      // As of 8.3, BTree, Hash, and GIST all have the same size
 	      // special section, but the last two bytes of the section
 	      // can be checked to determine what's what.
-	      uint16 ptype = *(uint16 *) (buffer + blockSize - sizeof(uint16));
-
-	      if (ptype <= MAX_BT_CYCLE_ID &&
+	      if (*ptype <= MAX_BT_CYCLE_ID &&
 		  specialSize == MAXALIGN (sizeof (BTPageOpaqueData)))
 		rc = SPEC_SECT_INDEX_BTREE;
-	      else if (ptype == HASHO_PAGE_ID &&
+	      else if (*ptype == HASHO_PAGE_ID &&
 		  specialSize == MAXALIGN (sizeof (HashPageOpaqueData)))
 		rc = SPEC_SECT_INDEX_HASH;
-	      else if (ptype == GIST_PAGE_ID &&
+	      else if (*ptype == GIST_PAGE_ID &&
 		       specialSize == MAXALIGN (sizeof (GISTPageOpaqueData)))
 		rc = SPEC_SECT_INDEX_GIST;
 	      else
@@ -687,10 +700,30 @@ FormatItemBlock (Page page)
 	formatAs = ITEM_INDEX;
       else if (itemOptions & ITEM_HEAP)
 	formatAs = ITEM_HEAP;
-      else if (specialType != SPEC_SECT_NONE)
-	formatAs = ITEM_INDEX;
       else
-	formatAs = ITEM_HEAP;
+	  switch (specialType)
+	  {
+	      case SPEC_SECT_INDEX_BTREE:
+	      case SPEC_SECT_INDEX_HASH:
+	      case SPEC_SECT_INDEX_GIST:
+	      case SPEC_SECT_INDEX_GIN:
+		  formatAs = ITEM_INDEX;
+		  break;
+	      case SPEC_SECT_INDEX_SPGIST:
+		  {
+		      SpGistPageOpaque spgpo =
+			  (SpGistPageOpaque) ((char *) page +
+					      ((PageHeader) page)->pd_special);
+		      if (spgpo->flags & SPGIST_LEAF)
+			  formatAs = ITEM_SPG_LEAF;
+		      else
+			  formatAs = ITEM_SPG_INNER;
+		  }
+		  break;
+	      default:
+		  formatAs = ITEM_HEAP;
+		  break;
+	  }
 
       for (x = 1; x < (maxOffset + 1); x++)
 	{
@@ -754,9 +787,16 @@ static void
 FormatItem (unsigned int numBytes, unsigned int startIndex,
 	    unsigned int formatAs)
 {
-  // It is an index item, so dump the index header
+  static const char * const spgist_tupstates[4] = {
+      "LIVE",
+      "REDIRECT",
+      "DEAD",
+      "PLACEHOLDER"
+  };
+
   if (formatAs == ITEM_INDEX)
     {
+      // It is an IndexTuple item, so dump the index header
       if (numBytes < SizeOfIptrData)
 	{
 	  if (numBytes)
@@ -779,9 +819,86 @@ FormatItem (unsigned int numBytes, unsigned int startIndex,
 		    "Internal <%d>.\n", numBytes, (int) IndexTupleSize (itup));
 	}
     }
+  else if (formatAs == ITEM_SPG_INNER)
+    {
+      // It is an SpGistInnerTuple item, so dump the index header
+      if (numBytes < SGITHDRSZ)
+	{
+	  if (numBytes)
+	    printf ("  Error: This item does not look like an SPGiST item.\n");
+	}
+      else
+	{
+	  SpGistInnerTuple itup = (SpGistInnerTuple) (&(buffer[startIndex]));
+	  printf ("  State: %s  allTheSame: %d nNodes: %u prefixSize: %u\n\n",
+		  spgist_tupstates[itup->tupstate],
+		  itup->allTheSame,
+		  itup->nNodes,
+		  itup->prefixSize);
+
+	  if (numBytes != itup->size)
+	    printf ("  Error: Item size difference. Given <%u>, "
+		    "Internal <%d>.\n", numBytes, (int) itup->size);
+	  else if (itup->prefixSize == MAXALIGN(itup->prefixSize))
+	  {
+	      int i;
+	      SpGistNodeTuple node;
+
+	      // Dump the prefix contents in hex and ascii
+	      if ((blockOptions & BLOCK_FORMAT) &&
+		  SGITHDRSZ + itup->prefixSize <= numBytes)
+		  FormatBinary (SGITHDRSZ + itup->prefixSize, startIndex);
+
+	      // Try to print the nodes, but only while pointer is sane
+	      SGITITERATE(itup, i, node)
+	      {
+		  int off = (char *) node - (char *) itup;
+		  if (off + SGNTHDRSZ > numBytes)
+		      break;
+		  printf ("  Node %2u:  Downlink: %u/%u  Size: %d  Null: %u\n",
+			  i,
+			  ((uint32) ((node->t_tid.ip_blkid.bi_hi << 16) |
+				     (uint16) node->t_tid.ip_blkid.bi_lo)),
+			  node->t_tid.ip_posid,
+			  (int) IndexTupleSize(node),
+			  IndexTupleHasNulls(node) ? 1 : 0);
+		  // Dump the node's contents in hex and ascii
+		  if ((blockOptions & BLOCK_FORMAT) &&
+		      off + IndexTupleSize(node) <= numBytes)
+		      FormatBinary (IndexTupleSize(node), startIndex + off);
+		  if (IndexTupleSize(node) != MAXALIGN(IndexTupleSize(node)))
+		      break;
+	      }
+	  }
+	  printf ("\n");
+	}
+    }
+  else if (formatAs == ITEM_SPG_LEAF)
+    {
+      // It is an SpGistLeafTuple item, so dump the index header
+      if (numBytes < SGLTHDRSZ)
+	{
+	  if (numBytes)
+	    printf ("  Error: This item does not look like an SPGiST item.\n");
+	}
+      else
+	{
+	  SpGistLeafTuple itup = (SpGistLeafTuple) (&(buffer[startIndex]));
+	  printf ("  State: %s  nextOffset: %u  Block Id: %u  linp Index: %u\n\n",
+		  spgist_tupstates[itup->tupstate],
+		  itup->nextOffset,
+		  ((uint32) ((itup->heapPtr.ip_blkid.bi_hi << 16) |
+			     (uint16) itup->heapPtr.ip_blkid.bi_lo)),
+		  itup->heapPtr.ip_posid);
+
+	  if (numBytes != itup->size)
+	    printf ("  Error: Item size difference. Given <%u>, "
+		    "Internal <%d>.\n", numBytes, (int) itup->size);
+	}
+    }
   else
     {
-      // It is a heap item, so dump the heap header
+      // It is a HeapTuple item, so dump the heap header
       int alignedSize = MAXALIGN (sizeof (HeapTupleHeaderData));
 
       if (numBytes < alignedSize)
@@ -908,9 +1025,8 @@ FormatItem (unsigned int numBytes, unsigned int startIndex,
 }
 
 
-// On blocks that have special sections, we have to interpret the
-// contents based on size of the special section (since there is
-// no other way)
+// On blocks that have special sections, print the contents
+// according to previously determined special section type
 static void
 FormatSpecial ()
 {
@@ -1043,6 +1159,28 @@ FormatSpecial ()
       }
       break;
 
+      // SP-GIST index section
+    case SPEC_SECT_INDEX_SPGIST:
+      {
+	SpGistPageOpaque spgistSection = (SpGistPageOpaque) (buffer + specialOffset);
+	if (spgistSection->flags & SPGIST_META)
+	  strcat (flagString, "META|");
+	if (spgistSection->flags & SPGIST_DELETED)
+	  strcat (flagString, "DELETED|");
+	if (spgistSection->flags & SPGIST_LEAF)
+	  strcat (flagString, "LEAF|");
+	if (strlen (flagString))
+	  flagString[strlen (flagString) - 1] = '\0';
+	printf (" SPGIST Index Section:\n"
+		"  Flags: 0x%08x (%s)\n"
+		"  nRedirection: %d\n"
+		"  nPlaceholder: %d\n\n",
+		spgistSection->flags, flagString,
+		spgistSection->nRedirection,
+		spgistSection->nPlaceholder);
+      }
+      break;
+
       // No idea what type of special section this is
     default:
       printf (" Unknown special section type. Type: <%u>.\n", specialType);
@@ -1101,6 +1239,8 @@ FormatControl ()
 {
   unsigned int localPgVersion = 0;
   unsigned int controlFileSize = 0;
+  time_t cd_time;
+  time_t cp_time;
 
   printf
     ("\n<pg_control Contents> *********************************************\n\n");
@@ -1157,6 +1297,10 @@ FormatControl ()
 	  break;
 	}
 
+      /* convert timestamps to system's time_t width */
+      cd_time = controlData->time;
+      cp_time = checkPoint->time;
+
       printf ("                          CRC: %s\n"
 	      "           pg_control Version: %u%s\n"
 	      "              Catalog Version: %u\n"
@@ -1191,7 +1335,7 @@ FormatControl ()
 	      controlData->catalog_version_no,
 	      controlData->system_identifier,
 	      dbState,
-	      ctime (&(controlData->time)),
+	      ctime (&(cd_time)),
 	      controlData->checkPoint.xlogid, controlData->checkPoint.xrecoff,
 	      controlData->prevCheckPoint.xlogid, controlData->prevCheckPoint.xrecoff,
 	      checkPoint->redo.xlogid, checkPoint->redo.xrecoff,
@@ -1199,7 +1343,7 @@ FormatControl ()
 	      checkPoint->nextXidEpoch, checkPoint->nextXid,
 	      checkPoint->nextOid,
 	      checkPoint->nextMulti, checkPoint->nextMultiOffset,
-	      ctime (&checkPoint->time),
+	      ctime (&cp_time),
 	      controlData->minRecoveryPoint.xlogid, controlData->minRecoveryPoint.xrecoff,
 	      controlData->maxAlign,
 	      controlData->floatFormat,

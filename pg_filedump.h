@@ -22,21 +22,21 @@
  * Original Author: Patrick Macdonald <patrickm@redhat.com> 
  */
 
-#define FD_VERSION	"9.1.0"			/* version ID of pg_filedump */
-#define FD_PG_VERSION	"PostgreSQL 9.1.x"	/* PG version it works with */
+#define FD_VERSION	"9.2.0"			/* version ID of pg_filedump */
+#define FD_PG_VERSION	"PostgreSQL 9.2.x"	/* PG version it works with */
 
 #include "postgres.h"
 
 #include <time.h>
 #include <ctype.h>
 
-#include "access/gin.h"
 #include "access/gin_private.h"
 #include "access/gist.h"
 #include "access/hash.h"
 #include "access/htup.h"
 #include "access/itup.h"
 #include "access/nbtree.h"
+#include "access/spgist_private.h"
 #include "catalog/pg_control.h"
 #include "storage/bufpage.h"
 
@@ -61,8 +61,10 @@ static unsigned int itemOptions = 0;
 typedef enum
 {
   ITEM_DETAIL = 0x00000001,	// -i: Display interpreted items    
-  ITEM_HEAP = 0x00000002,	// -y: Blocks contain heap items
-  ITEM_INDEX = 0x00000004	// -x: Blocks contain index items
+  ITEM_HEAP = 0x00000002,	// -y: Blocks contain HeapTuple items
+  ITEM_INDEX = 0x00000004,	// -x: Blocks contain IndexTuple items
+  ITEM_SPG_INNER = 0x00000008,	// Blocks contain SpGistInnerTuple items
+  ITEM_SPG_LEAF = 0x00000010	// Blocks contain SpGistLeafTuple items
 }
 itemSwitches;
 
@@ -85,6 +87,7 @@ typedef enum
   SPEC_SECT_INDEX_HASH,		// Hash index info in special section
   SPEC_SECT_INDEX_GIST,		// GIST index info in special section
   SPEC_SECT_INDEX_GIN,		// GIN index info in special section
+  SPEC_SECT_INDEX_SPGIST,	// SP-GIST index info in special section
   SPEC_SECT_ERROR_UNKNOWN,	// Unknown error 
   SPEC_SECT_ERROR_BOUNDARY	// Boundary error
 }
