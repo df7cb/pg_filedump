@@ -1,9 +1,9 @@
 /*
  * pg_filedump.h - PostgreSQL file dump utility for dumping and
  *                 formatting heap (data), index and control files.
- * 
+ *
  * Copyright (c) 2002-2010 Red Hat, Inc.
- * Copyright (c) 2011, PostgreSQL Global Development Group
+ * Copyright (c) 2011-2012, PostgreSQL Global Development Group
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Original Author: Patrick Macdonald <patrickm@redhat.com> 
+ * Original Author: Patrick Macdonald <patrickm@redhat.com>
  */
 
 #define FD_VERSION	"9.2.0"			/* version ID of pg_filedump */
@@ -53,14 +53,14 @@ typedef enum
 }
 blockSwitches;
 
-static int blockStart = -1;	// -R [start]: Block range start 
+static int blockStart = -1;	// -R [start]: Block range start
 static int blockEnd = -1;	// -R [end]: Block range end
 
 // Options for Item formatting operations
 static unsigned int itemOptions = 0;
 typedef enum
 {
-  ITEM_DETAIL = 0x00000001,	// -i: Display interpreted items    
+  ITEM_DETAIL = 0x00000001,	// -i: Display interpreted items
   ITEM_HEAP = 0x00000002,	// -y: Blocks contain HeapTuple items
   ITEM_INDEX = 0x00000004,	// -x: Blocks contain IndexTuple items
   ITEM_SPG_INNER = 0x00000008,	// Blocks contain SpGistInnerTuple items
@@ -82,13 +82,13 @@ controlSwitches;
 typedef enum
 {
   SPEC_SECT_NONE,		// No special section on block
-  SPEC_SECT_SEQUENCE,		// Sequence info in special section 
+  SPEC_SECT_SEQUENCE,		// Sequence info in special section
   SPEC_SECT_INDEX_BTREE,	// BTree index info in special section
   SPEC_SECT_INDEX_HASH,		// Hash index info in special section
   SPEC_SECT_INDEX_GIST,		// GIST index info in special section
   SPEC_SECT_INDEX_GIN,		// GIN index info in special section
   SPEC_SECT_INDEX_SPGIST,	// SP-GIST index info in special section
-  SPEC_SECT_ERROR_UNKNOWN,	// Unknown error 
+  SPEC_SECT_ERROR_UNKNOWN,	// Unknown error
   SPEC_SECT_ERROR_BOUNDARY	// Boundary error
 }
 specialSectionTypes;
@@ -108,7 +108,7 @@ typedef enum
 optionReturnCodes;
 
 // Simple macro to check for duplicate options and then set
-// an option flag for later consumption 
+// an option flag for later consumption
 #define SET_OPTION(_x,_y,_z) if (_x & _y)               \
                                {                        \
                                  rc = OPT_RC_DUPLICATE; \

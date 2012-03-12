@@ -2,7 +2,7 @@ pg_filedump - Display formatted contents of a PostgreSQL heap, index,
               or control file.
 
 Copyright (c) 2002-2010 Red Hat, Inc.
-Copyright (c) 2011, PostgreSQL Global Development Group
+Copyright (c) 2011-2012, PostgreSQL Global Development Group
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -36,22 +36,24 @@ corrupt, you need a method of forcing a block size.
 Compile/Installation:
 
 To compile pg_filedump, you will need to have a properly configured
-PostgreSQL source tree for the appropriate PostgreSQL major version.
+PostgreSQL source tree or complete install tree (with include files)
+of the appropriate PostgreSQL major version.
 
-There are two makefiles included in this package.  Makefile is a
-standalone makefile for pg_filedump.  Alter the PGSQL variable to point
-to the PostgreSQL source tree.  Makefile.contrib can be used if this
-package was untarred in the contrib directory of a PostgreSQL build tree.
+There are two makefiles included in this package.  Makefile is a standalone
+makefile for pg_filedump.  Alter its PGSQL_INCLUDE_DIR variable to point to
+the PostgreSQL include files.  Makefile.contrib can be used if this package
+was untarred in the contrib directory of a PostgreSQL build tree.
 
   make
-  make install (if in the contrib directory)
+  make install (if using Makefile.contrib)
 
 It is also possible to use Makefile.contrib without being in the contrib
 directory:
 
   make -f Makefile.contrib USE_PGXS=1
 
-This will not eliminate the need to have a complete source tree, though.
+This method requires that the pg_config program be in your PATH, but should
+not require any manual adjustments of the Makefile.
 
 
 ------------------------------------------------------------------------
@@ -85,3 +87,6 @@ The following options are valid for control files:
   -c  Interpret the file listed as a control file
   -f  Display formatted content dump along with interpretation
   -S  Force block size to [blocksize]
+
+In most cases it's recommended to use the -i and -f options to get
+the most useful dump output.

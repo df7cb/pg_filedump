@@ -1,7 +1,5 @@
 PROGRAM = pg_filedump
-OBJS	= pg_filedump.o pg_crc.o 
-
-EXTRA_CLEAN = pg_crc.c 
+OBJS	= pg_filedump.o
 
 DOCS = README.pg_filedump
 
@@ -15,6 +13,3 @@ top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
-
-pg_crc.c: $(top_srcdir)/src/backend/utils/hash/pg_crc.c
-	rm -f $@ && $(LN_S) $< .

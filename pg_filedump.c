@@ -3,7 +3,7 @@
  *                 formatting heap (data), index and control files.
  *
  * Copyright (c) 2002-2010 Red Hat, Inc.
- * Copyright (c) 2011, PostgreSQL Global Development Group
+ * Copyright (c) 2011-2012, PostgreSQL Global Development Group
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,10 +19,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Original Author: Patrick Macdonald <patrickm@redhat.com> 
+ * Original Author: Patrick Macdonald <patrickm@redhat.com>
  */
 
 #include "pg_filedump.h"
+
+#include "utils/pg_crc_tables.h"
 
 // Global variables for ease of use mostly
 static FILE *fp = NULL;		// File to dump or format
@@ -54,7 +56,7 @@ static void DumpBinaryBlock ();
 static void DumpFileContents ();
 
 
-// Send properly formed usage information to the user. 
+// Send properly formed usage information to the user.
 static void
 DisplayOptions (unsigned int validOptions)
 {
@@ -62,7 +64,7 @@ DisplayOptions (unsigned int validOptions)
     printf
       ("\nVersion %s (for %s)"
        "\nCopyright (c) 2002-2010 Red Hat, Inc."
-       "\nCopyright (c) 2011, PostgreSQL Global Development Group\n",
+       "\nCopyright (c) 2011-2012, PostgreSQL Global Development Group\n",
        FD_VERSION, FD_PG_VERSION);
 
   printf
@@ -96,7 +98,7 @@ DisplayOptions (unsigned int validOptions)
 
 // Iterate through the provided options and set the option flags.
 // An error will result in a positive rc and will force a display
-// of the usage information.  This routine returns enum 
+// of the usage information.  This routine returns enum
 // optionReturnCode values.
 static unsigned int
 ConsumeOptions (int numOptions, char **options)
@@ -170,7 +172,7 @@ ConsumeOptions (int numOptions, char **options)
 	    }
 	}
       // Check for the special case where the user forces a block size
-      // instead of having the tool determine it.  This is useful if  
+      // instead of having the tool determine it.  This is useful if
       // the header of block 0 is corrupt and gives a garbage block size
       else if ((optionStringLength == 2)
 	       && (strcmp (optionString, "-S") == 0))
@@ -220,8 +222,8 @@ ConsumeOptions (int numOptions, char **options)
 	    }
 	  else
 	    {
-	      // Could be the case where the help flag is used without a 
-	      // filename. Otherwise, the last option isn't a file            
+	      // Could be the case where the help flag is used without a
+	      // filename. Otherwise, the last option isn't a file
 	      if (strcmp (optionString, "-h") == 0)
 		rc = OPT_RC_COPYRIGHT;
 	      else
@@ -250,12 +252,12 @@ ConsumeOptions (int numOptions, char **options)
 	    {
 	      switch (optionString[y])
 		{
-		  // Use absolute addressing              
+		  // Use absolute addressing
 		case 'a':
 		  SET_OPTION (blockOptions, BLOCK_ABSOLUTE, 'a');
 		  break;
 
-		  // Dump the binary contents of the page 
+		  // Dump the binary contents of the page
 		case 'b':
 		  SET_OPTION (blockOptions, BLOCK_BINARY, 'b');
 		  break;
@@ -276,7 +278,7 @@ ConsumeOptions (int numOptions, char **options)
 		  SET_OPTION (blockOptions, BLOCK_FORMAT, 'f');
 		  break;
 
-		  // Display the usage screen  
+		  // Display the usage screen
 		case 'h':
 		  rc = OPT_RC_COPYRIGHT;
 		  break;
@@ -325,7 +327,7 @@ ConsumeOptions (int numOptions, char **options)
 
   // If the user requested a control file dump, a pure binary
   // block dump or a non-interpreted formatted dump, mask off
-  // all other block level options (with a few exceptions)   
+  // all other block level options (with a few exceptions)
   if (rc == OPT_RC_VALID)
     {
       // The user has requested a control file dump, only -f and
@@ -366,8 +368,8 @@ ConsumeOptions (int numOptions, char **options)
   return (rc);
 }
 
-// Given the index into the parameter list, convert and return the 
-// current string to a number if possible 
+// Given the index into the parameter list, convert and return the
+// current string to a number if possible
 static int
 GetOptionValue (char *optionString)
 {
@@ -421,7 +423,7 @@ GetSpecialSectionType (Page page)
   unsigned int specialValue;
   PageHeader pageHeader = (PageHeader) page;
 
-  // If this is not a partial header, check the validity of the 
+  // If this is not a partial header, check the validity of the
   // special section offset and contents
   if (bytesToFormat > sizeof (PageHeaderData))
     {
@@ -439,7 +441,7 @@ GetSpecialSectionType (Page page)
 
 	  specialSize = blockSize - specialOffset;
 
-	  // If there is a special section, use its size to guess its 
+	  // If there is a special section, use its size to guess its
 	  // contents, checking the last 2 bytes of the page in cases
 	  // that are ambiguous.  Note we don't attempt to dereference
 	  // the pointers without checking bytesToFormat == blockSize.
@@ -530,7 +532,7 @@ CreateDumpFileHeader (int numOptions, char **options)
   time_t rightNow = time (NULL);
 
   // Iterate through the options and cache them.
-  // The maximum we can display is 50 option characters + spaces.  
+  // The maximum we can display is 50 option characters + spaces.
   for (x = 1; x < (numOptions - 1); x++)
     {
       if ((strlen (optionBuffer) + strlen (options[x])) > 50)
@@ -654,7 +656,7 @@ FormatHeader (Page page)
       (" Error: End of block encountered within the header."
        " Bytes read: %4u.\n\n", bytesToFormat);
 
-  // A request to dump the formatted binary of the block (header, 
+  // A request to dump the formatted binary of the block (header,
   // items and special section).  It's best to dump even on an error
   // so the user can see the raw image.
   if (blockOptions & BLOCK_FORMAT)
@@ -663,7 +665,7 @@ FormatHeader (Page page)
   return (rc);
 }
 
-// Dump out formatted items that reside on this block 
+// Dump out formatted items that reside on this block
 static void
 FormatItemBlock (Page page)
 {
@@ -682,8 +684,8 @@ FormatItemBlock (Page page)
   printf ("<Data> ------ \n");
 
   // Loop through the items on the block.  Check if the block is
-  // empty and has a sensible item array listed before running 
-  // through each item  
+  // empty and has a sensible item array listed before running
+  // through each item
   if (maxOffset == 0)
     printf (" Empty block - no items listed \n\n");
   else if ((maxOffset < 0) || (maxOffset > blockSize))
@@ -694,7 +696,7 @@ FormatItemBlock (Page page)
       int formatAs;
       char textFlags[16];
 
-      // First, honour requests to format items a special way, then 
+      // First, honour requests to format items a special way, then
       // use the special section to determine the format style
       if (itemOptions & ITEM_INDEX)
 	formatAs = ITEM_INDEX;
@@ -766,11 +768,11 @@ FormatItemBlock (Page page)
 	  else
 	    {
 	      // If the user requests that the items be interpreted as
-	      // heap or index items...     
+	      // heap or index items...
 	      if (itemOptions & ITEM_DETAIL)
 		FormatItem (itemSize, itemOffset, formatAs);
 
-	      // Dump the items contents in hex and ascii 
+	      // Dump the items contents in hex and ascii
 	      if (blockOptions & BLOCK_FORMAT)
 		FormatBinary (itemSize, itemOffset);
 
@@ -945,7 +947,7 @@ FormatItem (unsigned int numBytes, unsigned int startIndex,
 		    t_ctid.ip_blkid.bi_lo)), htup->t_ctid.ip_posid,
 		  localNatts, htup->t_hoff);
 
-	  // Place readable versions of the tuple info mask into a buffer.  
+	  // Place readable versions of the tuple info mask into a buffer.
 	  // Assume that the string can not expand beyond 256.
 	  flagString[0] = '\0';
 	  if (infoMask & HEAP_HASNULL)
@@ -990,7 +992,7 @@ FormatItem (unsigned int numBytes, unsigned int startIndex,
 	  printf ("  infomask: 0x%04x (%s) \n", infoMask, flagString);
 
 	  // As t_bits is a variable length array, determine the length of
-	  // the header proper  
+	  // the header proper
 	  if (infoMask & HEAP_HASNULL)
 	    bitmapLength = BITMAPLEN (localNatts);
 	  else
@@ -1049,7 +1051,7 @@ FormatSpecial ()
       printf (" Sequence: 0x%08x\n", SEQUENCE_MAGIC);
       break;
 
-      // Btree index section  
+      // Btree index section
     case SPEC_SECT_INDEX_BTREE:
       {
 	BTPageOpaque btreeSection = (BTPageOpaque) (buffer + specialOffset);
@@ -1082,7 +1084,7 @@ FormatSpecial ()
       }
       break;
 
-      // Hash index section  
+      // Hash index section
     case SPEC_SECT_INDEX_HASH:
       {
 	HashPageOpaque hashSection = (HashPageOpaque) (buffer + specialOffset);
@@ -1169,6 +1171,8 @@ FormatSpecial ()
 	  strcat (flagString, "DELETED|");
 	if (spgistSection->flags & SPGIST_LEAF)
 	  strcat (flagString, "LEAF|");
+	if (spgistSection->flags & SPGIST_NULLS)
+	  strcat (flagString, "NULLS|");
 	if (strlen (flagString))
 	  flagString[strlen (flagString) - 1] = '\0';
 	printf (" SPGIST Index Section:\n"
@@ -1187,7 +1191,7 @@ FormatSpecial ()
       break;
     }
 
-  // Dump the formatted contents of the special section       
+  // Dump the formatted contents of the special section
   if (blockOptions & BLOCK_FORMAT)
     {
       if (specialType == SPEC_SECT_ERROR_BOUNDARY)
@@ -1212,17 +1216,17 @@ FormatBlock ()
 	   blockSize) ? "***************" : " PARTIAL BLOCK ");
 
   // Either dump out the entire block in hex+acsii fashion or
-  // interpret the data based on block structure 
+  // interpret the data based on block structure
   if (blockOptions & BLOCK_NO_INTR)
     FormatBinary (bytesToFormat, 0);
   else
     {
       int rc;
       // Every block contains a header, items and possibly a special
-      // section.  Beware of partial block reads though            
+      // section.  Beware of partial block reads though
       rc = FormatHeader (page);
 
-      // If we didn't encounter a partial read in the header, carry on... 
+      // If we didn't encounter a partial read in the header, carry on...
       if (rc != EOF_ENCOUNTERED)
 	{
 	  FormatItemBlock (page);
@@ -1245,7 +1249,7 @@ FormatControl ()
   printf
     ("\n<pg_control Contents> *********************************************\n\n");
 
-  // Check the version 
+  // Check the version
   if (bytesToFormat >= offsetof (ControlFileData, catalog_version_no))
     localPgVersion = ((ControlFileData *) buffer)->pg_control_version;
 
@@ -1365,12 +1369,12 @@ FormatControl ()
 	      "        Size: Correct <%u>  Received <%u>.\n\n",
 	      controlFileSize, bytesToFormat);
 
-      // If we have an error, force a formatted dump so we can see 
+      // If we have an error, force a formatted dump so we can see
       // where things are going wrong
       controlOptions |= CONTROL_FORMAT;
     }
 
-  // Dump hex and ascii representation of data 
+  // Dump hex and ascii representation of data
   if (controlOptions & CONTROL_FORMAT)
     {
       printf ("<pg_control Formatted Dump> *****************"
@@ -1379,7 +1383,7 @@ FormatControl ()
     }
 }
 
-// Dump out the contents of the block in hex and ascii. 
+// Dump out the contents of the block in hex and ascii.
 // BYTES_PER_LINE bytes are formatted in each line.
 static void
 FormatBinary (unsigned int numBytes, unsigned int startIndex)
@@ -1392,7 +1396,7 @@ FormatBinary (unsigned int numBytes, unsigned int startIndex)
   if (numBytes)
     {
       // Iterate through a printable row detailing the current
-      // address, the hex and ascii values         
+      // address, the hex and ascii values
       for (index = startIndex; index < lastByte; index += BYTES_PER_LINE)
 	{
 	  stopIndex = index + BYTES_PER_LINE;
@@ -1469,7 +1473,7 @@ DumpFileContents ()
       if (bytesToFormat == 0)
 	{
 	  // fseek() won't pop an error if you seek passed eof.  The next
-	  // subsequent read gets the error.    
+	  // subsequent read gets the error.
 	  if (initialRead)
 	    printf ("Error: Premature end of file encountered.\n");
 	  else if (!(blockOptions & BLOCK_BINARY))
@@ -1516,7 +1520,7 @@ DumpFileContents ()
 int
 main (int argv, char **argc)
 {
-  // If there is a parameter list, validate the options 
+  // If there is a parameter list, validate the options
   unsigned int validOptions;
   validOptions = (argv < 2) ? OPT_RC_COPYRIGHT : ConsumeOptions (argv, argc);
 
@@ -1526,12 +1530,12 @@ main (int argv, char **argc)
     DisplayOptions (validOptions);
   else
     {
-      // Don't dump the header if we're dumping binary pages        
+      // Don't dump the header if we're dumping binary pages
       if (!(blockOptions & BLOCK_BINARY))
 	CreateDumpFileHeader (argv, argc);
 
       // If the user has not forced a block size, use the size of the
-      // control file data or the information from the block 0 header 
+      // control file data or the information from the block 0 header
       if (controlOptions)
 	{
 	  if (!(controlOptions & CONTROL_FORCED))
