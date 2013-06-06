@@ -22,8 +22,8 @@
  * Original Author: Patrick Macdonald <patrickm@redhat.com>
  */
 
-#define FD_VERSION	"9.2.0"			/* version ID of pg_filedump */
-#define FD_PG_VERSION	"PostgreSQL 9.2.x"	/* PG version it works with */
+#define FD_VERSION	"9.3.0"			/* version ID of pg_filedump */
+#define FD_PG_VERSION	"PostgreSQL 9.3.x"	/* PG version it works with */
 
 #include "postgres.h"
 
@@ -34,6 +34,7 @@
 #include "access/gist.h"
 #include "access/hash.h"
 #include "access/htup.h"
+#include "access/htup_details.h"
 #include "access/itup.h"
 #include "access/nbtree.h"
 #include "access/spgist_private.h"

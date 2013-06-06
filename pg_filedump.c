@@ -609,15 +609,15 @@ FormatHeader (Page page)
 	 " Block: Size %4d  Version %4u            Upper    %4u (0x%04hx)\n"
 	 " LSN:  logid %6d recoff 0x%08x      Special  %4u (0x%04hx)\n"
 	 " Items: %4d                      Free Space: %4u\n"
-	 " TLI: 0x%04x  Prune XID: 0x%08x  Flags: 0x%04x (%s)\n"
+	 " Checksum: 0x%04x  Prune XID: 0x%08x  Flags: 0x%04x (%s)\n"
 	 " Length (including item array): %u\n\n",
 	 pageOffset, pageHeader->pd_lower, pageHeader->pd_lower,
 	 (int) PageGetPageSize (page), blockVersion,
 	 pageHeader->pd_upper, pageHeader->pd_upper,
-	 pageLSN.xlogid, pageLSN.xrecoff,
+	 (uint32) (pageLSN >> 32), (uint32) pageLSN,
 	 pageHeader->pd_special, pageHeader->pd_special,
 	 maxOffset, pageHeader->pd_upper - pageHeader->pd_lower,
-	 pageHeader->pd_tli, pageHeader->pd_prune_xid,
+	 pageHeader->pd_checksum, pageHeader->pd_prune_xid,
 	 pageHeader->pd_flags, flagString,
 	 headerBytes);
 
@@ -933,7 +933,7 @@ FormatItem (unsigned int numBytes, unsigned int startIndex,
 
 	  printf ("  XMIN: %u  XMAX: %u  CID|XVAC: %u",
 		  HeapTupleHeaderGetXmin(htup),
-		  HeapTupleHeaderGetXmax(htup),
+		  HeapTupleHeaderGetRawXmax(htup),
 		  HeapTupleHeaderGetRawCommandId(htup));
 
 	  if (infoMask & HEAP_HASOID)
@@ -958,12 +958,14 @@ FormatItem (unsigned int numBytes, unsigned int startIndex,
 	    strcat (flagString, "HASEXTERNAL|");
 	  if (infoMask & HEAP_HASOID)
 	    strcat (flagString, "HASOID|");
+	  if (infoMask & HEAP_XMAX_KEYSHR_LOCK)
+	    strcat (flagString, "XMAX_KEYSHR_LOCK|");
 	  if (infoMask & HEAP_COMBOCID)
 	    strcat (flagString, "COMBOCID|");
 	  if (infoMask & HEAP_XMAX_EXCL_LOCK)
 	    strcat (flagString, "XMAX_EXCL_LOCK|");
-	  if (infoMask & HEAP_XMAX_SHARED_LOCK)
-	    strcat (flagString, "XMAX_SHARED_LOCK|");
+	  if (infoMask & HEAP_XMAX_LOCK_ONLY)
+	    strcat (flagString, "XMAX_LOCK_ONLY|");
 	  if (infoMask & HEAP_XMIN_COMMITTED)
 	    strcat (flagString, "XMIN_COMMITTED|");
 	  if (infoMask & HEAP_XMIN_INVALID)
@@ -981,6 +983,8 @@ FormatItem (unsigned int numBytes, unsigned int startIndex,
 	  if (infoMask & HEAP_MOVED_IN)
 	    strcat (flagString, "MOVED_IN|");
 
+	  if (infoMask2 & HEAP_KEYS_UPDATED)
+	    strcat (flagString, "KEYS_UPDATED|");
 	  if (infoMask2 & HEAP_HOT_UPDATED)
 	    strcat (flagString, "HOT_UPDATED|");
 	  if (infoMask2 & HEAP_ONLY_TUPLE)
@@ -1340,15 +1344,15 @@ FormatControl ()
 	      controlData->system_identifier,
 	      dbState,
 	      ctime (&(cd_time)),
-	      controlData->checkPoint.xlogid, controlData->checkPoint.xrecoff,
-	      controlData->prevCheckPoint.xlogid, controlData->prevCheckPoint.xrecoff,
-	      checkPoint->redo.xlogid, checkPoint->redo.xrecoff,
+	      (uint32) (controlData->checkPoint >> 32), (uint32) controlData->checkPoint,
+	      (uint32) (controlData->prevCheckPoint >> 32), (uint32) controlData->prevCheckPoint,
+	      (uint32) (checkPoint->redo >> 32), (uint32) checkPoint->redo,
 	      checkPoint->ThisTimeLineID,
 	      checkPoint->nextXidEpoch, checkPoint->nextXid,
 	      checkPoint->nextOid,
 	      checkPoint->nextMulti, checkPoint->nextMultiOffset,
 	      ctime (&cp_time),
-	      controlData->minRecoveryPoint.xlogid, controlData->minRecoveryPoint.xrecoff,
+	      (uint32) (controlData->minRecoveryPoint >> 32), (uint32) controlData->minRecoveryPoint,
 	      controlData->maxAlign,
 	      controlData->floatFormat,
 	      (controlData->floatFormat == FLOATFORMAT_VALUE ?

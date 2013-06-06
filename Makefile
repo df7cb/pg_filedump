@@ -1,7 +1,7 @@
 # View README.pg_filedump first
 
 # note this must match version macros in pg_filedump.h
-FD_VERSION=9.2.0
+FD_VERSION=9.3.0
 
 CC=gcc
 CFLAGS=-g -O -Wall -Wmissing-prototypes -Wmissing-declarations
