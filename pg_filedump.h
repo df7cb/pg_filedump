@@ -22,8 +22,8 @@
  * Original Author: Patrick Macdonald <patrickm@redhat.com>
  */
 
-#define FD_VERSION	"9.3.0"			/* version ID of pg_filedump */
-#define FD_PG_VERSION	"PostgreSQL 9.3.x"	/* PG version it works with */
+#define FD_VERSION	"9.4.0"			/* version ID of pg_filedump */
+#define FD_PG_VERSION	"PostgreSQL 9.4.x"	/* PG version it works with */
 
 #include "postgres.h"
 
@@ -50,7 +50,8 @@ typedef enum
   BLOCK_FORMAT = 0x00000004,	// -f: Formatted dump of blocks / control file
   BLOCK_FORCED = 0x00000008,	// -S: Block size forced
   BLOCK_NO_INTR = 0x00000010,	// -d: Dump straight blocks
-  BLOCK_RANGE = 0x00000020	// -R: Specific block range to dump
+  BLOCK_RANGE = 0x00000020,	// -R: Specific block range to dump
+  BLOCK_CHECKSUMS = 0x00000040 // -k: verify block checksums
 }
 blockSwitches;
 

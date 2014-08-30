@@ -26,6 +26,13 @@
 
 #include "utils/pg_crc_tables.h"
 
+// checksum_impl.h uses Assert, which doesn't work outside the server
+#undef Assert
+#define Assert(X)
+
+#include "storage/checksum.h"
+#include "storage/checksum_impl.h"
+
 // Global variables for ease of use mostly
 static FILE *fp = NULL;		// File to dump or format
 static char *fileName = NULL;	// File name for display
@@ -40,12 +47,12 @@ static unsigned int blockVersion = 0;	// Block version number
 static void DisplayOptions (unsigned int validOptions);
 static unsigned int ConsumeOptions (int numOptions, char **options);
 static int GetOptionValue (char *optionString);
-static void FormatBlock ();
+static void FormatBlock (BlockNumber blkno);
 static unsigned int GetBlockSize ();
 static unsigned int GetSpecialSectionType (Page page);
 static bool IsBtreeMetaPage(Page page);
 static void CreateDumpFileHeader (int numOptions, char **options);
-static int FormatHeader (Page page);
+static int FormatHeader (Page page, BlockNumber blkno);
 static void FormatItemBlock (Page page);
 static void FormatItem (unsigned int numBytes, unsigned int startIndex,
 			unsigned int formatAs);
@@ -68,7 +75,7 @@ DisplayOptions (unsigned int validOptions)
        FD_VERSION, FD_PG_VERSION);
 
   printf
-    ("\nUsage: pg_filedump [-abcdfhixy] [-R startblock [endblock]] [-S blocksize] file\n\n"
+    ("\nUsage: pg_filedump [-abcdfhikxy] [-R startblock [endblock]] [-S blocksize] file\n\n"
      "Display formatted contents of a PostgreSQL heap/index/control file\n"
      "Defaults are: relative addressing, range of the entire file, block\n"
      "               size as listed on block 0 in the file\n\n"
@@ -82,6 +89,7 @@ DisplayOptions (unsigned int validOptions)
      "  -f  Display formatted block content dump along with interpretation\n"
      "  -h  Display this information\n"
      "  -i  Display interpreted item details\n"
+     "  -k  Verify block checksums\n"
      "  -R  Display specific block ranges within the file (Blocks are\n"
      "      indexed from 0)\n" "        [startblock]: block to start at\n"
      "        [endblock]: block to end at\n"
@@ -286,6 +294,11 @@ ConsumeOptions (int numOptions, char **options)
 		  // Format the items in detail
 		case 'i':
 		  SET_OPTION (itemOptions, ITEM_DETAIL, 'i');
+		  break;
+
+		  // Verify block checksums
+		case 'k':
+		  SET_OPTION (blockOptions, BLOCK_CHECKSUMS, 'k');
 		  break;
 
 		  // Interpret items as standard index values
@@ -555,7 +568,7 @@ CreateDumpFileHeader (int numOptions, char **options)
 
 // Dump out a formatted block header for the requested block
 static int
-FormatHeader (Page page)
+FormatHeader (Page page, BlockNumber blkno)
 {
   int rc = 0;
   unsigned int headerBytes;
@@ -647,6 +660,14 @@ FormatHeader (Page page)
 	  || (pageHeader->pd_upper < pageHeader->pd_lower)
 	  || (pageHeader->pd_special > blockSize))
 	printf (" Error: Invalid header information.\n\n");
+
+      if (blockOptions & BLOCK_CHECKSUMS)
+   {
+     uint16 calc_checksum = pg_checksum_page(page, blkno);
+     if (calc_checksum != pageHeader->pd_checksum)
+       printf(" Error: checksum failure: calculated 0x%04x.\n\n",
+          calc_checksum);
+   }
     }
 
   // If we have reached the end of file while interpreting the header, let
@@ -1208,7 +1229,7 @@ FormatSpecial ()
 
 // For each block, dump out formatted header and content information
 static void
-FormatBlock ()
+FormatBlock (BlockNumber blkno)
 {
   Page page = (Page) buffer;
   pageOffset = blockSize * currentBlock;
@@ -1228,7 +1249,7 @@ FormatBlock ()
       int rc;
       // Every block contains a header, items and possibly a special
       // section.  Beware of partial block reads though
-      rc = FormatHeader (page);
+      rc = FormatHeader (page, blkno);
 
       // If we didn't encounter a partial read in the header, carry on...
       if (rc != EOF_ENCOUNTERED)
@@ -1498,7 +1519,7 @@ DumpFileContents ()
 		  contentsToDump = false;
 		}
 	      else
-		FormatBlock ();
+		FormatBlock (currentBlock);
 	    }
 	}
 

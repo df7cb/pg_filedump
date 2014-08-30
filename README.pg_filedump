@@ -59,7 +59,7 @@ not require any manual adjustments of the Makefile.
 ------------------------------------------------------------------------
 Invocation:
 
-pg_filedump [-abcdfhixy] [-R startblock [endblock]] [-S blocksize] file
+pg_filedump [-abcdfhikxy] [-R startblock [endblock]] [-S blocksize] file
 
 Defaults are: relative addressing, range of the entire file, block size
               as listed on block 0 in the file
@@ -74,6 +74,7 @@ The following options are valid for heap and index files:
   -f  Display formatted block content dump along with interpretation
   -h  Display this information
   -i  Display interpreted item details
+  -k  Verify block checksums
   -R  Display specific block ranges within the file (Blocks are
       indexed from 0)
         [startblock]: block to start at
