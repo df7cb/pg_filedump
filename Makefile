@@ -9,7 +9,8 @@ CFLAGS=-g -O -Wall -Wmissing-prototypes -Wmissing-declarations
 # If working with a PG source directory, point PGSQL_INCLUDE_DIR to its
 # src/include subdirectory.  If working with an installed tree, point to
 # the server include subdirectory, eg /usr/local/include/postgresql/server
-PGSQL_INCLUDE_DIR=../../pgsql/src/include
+PG_CONFIG=pg_config
+PGSQL_INCLUDE_DIR=$(shell $(PG_CONFIG) --includedir-server)
 
 
 DISTFILES= README.pg_filedump Makefile Makefile.contrib \
