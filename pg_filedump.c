@@ -24,7 +24,7 @@
 
 #include "pg_filedump.h"
 
-#include "utils/pg_crc_tables.h"
+#include <utils/pg_crc.h>
 
 /*	checksum_impl.h uses Assert, which doesn't work outside the server */
 #undef Assert
@@ -1132,6 +1132,8 @@ FormatSpecial()
 					strcat(flagString, "SPLITEND|");
 				if (btreeSection->btpo_flags & BTP_HAS_GARBAGE)
 					strcat(flagString, "HASGARBAGE|");
+				if (btreeSection->btpo_flags & BTP_INCOMPLETE_SPLIT)
+					strcat(flagString, "INCOMPLETESPLIT|");
 				if (strlen(flagString))
 					flagString[strlen(flagString) - 1] = '\0';
 
@@ -1216,6 +1218,10 @@ FormatSpecial()
 					strcat(flagString, "LIST|");
 				if (ginSection->flags & GIN_LIST_FULLROW)
 					strcat(flagString, "FULLROW|");
+				if (ginSection->flags & GIN_INCOMPLETE_SPLIT)
+					strcat(flagString, "INCOMPLETESPLIT|");
+				if (ginSection->flags & GIN_COMPRESSED)
+					strcat(flagString, "COMPRESSED|");
 				if (strlen(flagString))
 					flagString[strlen(flagString) - 1] = '\0';
 				printf(" GIN Index Section:\n"
@@ -1340,9 +1346,9 @@ FormatControl()
 		char	   *dbState;
 
 		/* Compute a local copy of the CRC to verify the one on disk */
-		INIT_CRC32(crcLocal);
-		COMP_CRC32(crcLocal, buffer, offsetof(ControlFileData, crc));
-		FIN_CRC32(crcLocal);
+		INIT_CRC32C(crcLocal);
+		COMP_CRC32C(crcLocal, buffer, offsetof(ControlFileData, crc));
+		FIN_CRC32C(crcLocal);
 
 		/* Grab a readable version of the database state */
 		switch (controlData->state)
@@ -1352,6 +1358,9 @@ FormatControl()
 				break;
 			case DB_SHUTDOWNED:
 				dbState = "SHUTDOWNED";
+				break;
+			case DB_SHUTDOWNED_IN_RECOVERY:
+				dbState = "SHUTDOWNED_IN_RECOVERY";
 				break;
 			case DB_SHUTDOWNING:
 				dbState = "SHUTDOWNING";
@@ -1400,7 +1409,7 @@ FormatControl()
 			   "           Maximum Index Keys: %u\n"
 			   "             TOAST Chunk Size: %u\n"
 			   "   Date and Time Type Storage: %s\n\n",
-			   EQ_CRC32(crcLocal,
+			   EQ_CRC32C(crcLocal,
 						controlData->crc) ? "Correct" : "Not Correct",
 			   controlData->pg_control_version,
 			   (controlData->pg_control_version == PG_CONTROL_VERSION ?
