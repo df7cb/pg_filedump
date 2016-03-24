@@ -11,6 +11,7 @@ CFLAGS=-g -O -Wall -Wmissing-prototypes -Wmissing-declarations
 # the server include subdirectory, eg /usr/local/include/postgresql/server
 PG_CONFIG=pg_config
 PGSQL_INCLUDE_DIR=$(shell $(PG_CONFIG) --includedir-server)
+PGSQL_LIB_DIR=$(shell $(PG_CONFIG) --libdir)
 
 
 DISTFILES= README.pg_filedump Makefile Makefile.contrib \
@@ -19,7 +20,7 @@ DISTFILES= README.pg_filedump Makefile Makefile.contrib \
 all: pg_filedump
 
 pg_filedump: pg_filedump.o
-	${CC} ${CFLAGS} -o pg_filedump pg_filedump.o -lpgport
+	${CC} ${CFLAGS} -o pg_filedump pg_filedump.o -L${PGSQL_LIB_DIR} -lpgport
 
 pg_filedump.o: pg_filedump.c
 	${CC} ${CFLAGS} -I${PGSQL_INCLUDE_DIR} pg_filedump.c -c
