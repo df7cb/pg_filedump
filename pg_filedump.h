@@ -55,6 +55,15 @@ typedef enum blockSwitches
 	BLOCK_CHECKSUMS = 0x00000040	/* -k: verify block checksums */
 } blockSwitches;
 
+/* Segment-related options */
+static unsigned int segmentOptions = 0;
+
+typedef enum segmentSwitches
+{
+	SEGMENT_SIZE_FORCED = 0x00000001,	/* -s: Segment size forced */
+	SEGMENT_NUMBER_FORCED = 0x00000002,	/* -n: Segment number forced */
+} segmentSwitches;
+
 /* -R[start]:Block range start */
 static int	blockStart = -1;
 

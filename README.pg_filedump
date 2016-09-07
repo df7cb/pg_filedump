@@ -59,7 +59,7 @@ not require any manual adjustments of the Makefile.
 ------------------------------------------------------------------------
 Invocation:
 
-pg_filedump [-abcdfhikxy] [-R startblock [endblock]] [-S blocksize] file
+pg_filedump [-abcdfhikxy] [-R startblock [endblock]] [-S blocksize] [-s segsize] [-n segnumber] file
 
 Defaults are: relative addressing, range of the entire file, block size
               as listed on block 0 in the file
@@ -80,6 +80,8 @@ The following options are valid for heap and index files:
         [startblock]: block to start at
         [endblock]: block to end at
       A startblock without an endblock will format the single block
+  -s  Force segment size to [segsize]
+  -n  Force segment number to [segnumber]
   -S  Force block size to [blocksize]
   -x  Force interpreted formatting of block items as index items
   -y  Force interpreted formatting of block items as heap items

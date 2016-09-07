@@ -52,6 +52,12 @@ static unsigned int blockSize = 0;
 /* Current block in file */
 static unsigned int currentBlock = 0;
 
+/* Segment size in bytes */
+static unsigned int segmentSize = RELSEG_SIZE * BLCKSZ;
+
+/* Number of current segment */
+static unsigned int segmentNumber = 0;
+
 /* Offset of current block */
 static unsigned int pageOffset = 0;
 
@@ -95,7 +101,7 @@ DisplayOptions(unsigned int validOptions)
 			 FD_VERSION, FD_PG_VERSION);
 
 	printf
-		("\nUsage: pg_filedump [-abcdfhikxy] [-R startblock [endblock]] [-S blocksize] file\n\n"
+		("\nUsage: pg_filedump [-abcdfhikxy] [-R startblock [endblock]] [-S blocksize] [-s segsize] [-n segnumber] file\n\n"
 	   "Display formatted contents of a PostgreSQL heap/index/control file\n"
 	   "Defaults are: relative addressing, range of the entire file, block\n"
 		 "               size as listed on block 0 in the file\n\n"
@@ -114,6 +120,8 @@ DisplayOptions(unsigned int validOptions)
 		 "      indexed from 0)\n" "        [startblock]: block to start at\n"
 		 "        [endblock]: block to end at\n"
 	  "      A startblock without an endblock will format the single block\n"
+		 "  -s  Force segment size to [segsize]\n"
+		 "  -n  Force segment number to [segnumber]\n"
 		 "  -S  Force block size to [blocksize]\n"
 		 "  -x  Force interpreted formatting of block items as index items\n"
 		 "  -y  Force interpreted formatting of block items as heap items\n\n"
@@ -122,6 +130,31 @@ DisplayOptions(unsigned int validOptions)
 		 "  -f  Display formatted content dump along with interpretation\n"
 		 "  -S  Force block size to [blocksize]\n"
 		 "\nReport bugs to <pgsql-bugs@postgresql.org>\n");
+}
+
+/*
+ * Determine segment number by segment file name. For instance, if file
+ * name is /path/to/xxxx.7 procedure returns 7. Default return value is 0.
+ */
+static unsigned int
+GetSegmentNumberFromFileName(const char* fileName)
+{
+	int segnumOffset = strlen(fileName) - 1;
+
+	if(segnumOffset < 0)
+		return 0;
+
+	while(isdigit(fileName[segnumOffset]))
+	{
+		segnumOffset--;
+		if(segnumOffset < 0)
+			return 0;
+	}
+
+	if(fileName[segnumOffset] != '.')
+		return 0;
+
+    return atoi(&fileName[segnumOffset+1]);
 }
 
 /*	Iterate through the provided options and set the option flags. */
@@ -235,6 +268,69 @@ ConsumeOptions(int numOptions, char **options)
 				break;
 			}
 		}
+		/* Check for the special case where the user forces a segment size. */
+		else if ((optionStringLength == 2)
+				 && (strcmp(optionString, "-s") == 0))
+		{
+			int			localSegmentSize;
+
+			SET_OPTION(segmentOptions, SEGMENT_SIZE_FORCED, 's');
+			/* Only accept the forced size option once */
+			if (rc == OPT_RC_DUPLICATE)
+				break;
+
+			/* The token immediately following -s is the segment size */
+			if (x >= (numOptions - 2))
+			{
+				rc = OPT_RC_INVALID;
+				printf("Error: Missing segment size identifier.\n");
+				break;
+			}
+
+			/* Next option encountered must be forced segment size */
+			optionString = options[++x];
+			if ((localSegmentSize = GetOptionValue(optionString)) > 0)
+				segmentSize = (unsigned int) localSegmentSize;
+			else
+			{
+				rc = OPT_RC_INVALID;
+				printf("Error: Invalid segment size requested <%s>.\n",
+					   optionString);
+				break;
+			}
+		}
+		/* Check for the special case where the user forces a segment number */
+		/* instead of having the tool determine it by file name. */
+		else if ((optionStringLength == 2)
+				 && (strcmp(optionString, "-n") == 0))
+		{
+			int			localSegmentNumber;
+
+			SET_OPTION(segmentOptions, SEGMENT_NUMBER_FORCED, 'n');
+			/* Only accept the forced segment number option once */
+			if (rc == OPT_RC_DUPLICATE)
+				break;
+
+			/* The token immediately following -n is the segment number */
+			if (x >= (numOptions - 2))
+			{
+				rc = OPT_RC_INVALID;
+				printf("Error: Missing segment number identifier.\n");
+				break;
+			}
+
+			/* Next option encountered must be forced segment number */
+			optionString = options[++x];
+			if ((localSegmentNumber = GetOptionValue(optionString)) > 0)
+				segmentNumber = (unsigned int) localSegmentNumber;
+			else
+			{
+				rc = OPT_RC_INVALID;
+				printf("Error: Invalid segment number requested <%s>.\n",
+					   optionString);
+				break;
+			}
+		}
 		/* The last option MUST be the file name */
 		else if (x == (numOptions - 1))
 		{
@@ -243,7 +339,11 @@ ConsumeOptions(int numOptions, char **options)
 			{
 				fp = fopen(optionString, "rb");
 				if (fp)
+				{
 					fileName = options[x];
+					if(!(segmentOptions & SEGMENT_NUMBER_FORCED))
+						segmentNumber = GetSegmentNumberFromFileName(fileName);
+				}
 				else
 				{
 					rc = OPT_RC_FILE;
@@ -691,7 +791,8 @@ FormatHeader(Page page, BlockNumber blkno)
 
 		if (blockOptions & BLOCK_CHECKSUMS)
 		{
-			uint16		calc_checksum = pg_checksum_page(page, blkno);
+			uint32	delta = (segmentSize/blockSize)*segmentNumber;
+			uint16	calc_checksum = pg_checksum_page(page, delta + blkno);
 
 			if (calc_checksum != pageHeader->pd_checksum)
 				printf(" Error: checksum failure: calculated 0x%04x.\n\n",
