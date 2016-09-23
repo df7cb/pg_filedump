@@ -67,6 +67,9 @@ static unsigned int bytesToFormat = 0;
 /* Block version number */
 static unsigned int blockVersion = 0;
 
+/* Program exit code */
+static int exitCode = 0;
+
 /***
  * Function Prototypes
  */
@@ -191,6 +194,7 @@ ConsumeOptions(int numOptions, char **options)
 			{
 				rc = OPT_RC_INVALID;
 				printf("Error: Missing range start identifier.\n");
+				exitCode = 1;
 				break;
 			}
 
@@ -205,6 +209,7 @@ ConsumeOptions(int numOptions, char **options)
 				rc = OPT_RC_INVALID;
 				printf("Error: Invalid range start identifier <%s>.\n",
 					   optionString);
+				exitCode = 1;
 				break;
 			}
 
@@ -230,6 +235,7 @@ ConsumeOptions(int numOptions, char **options)
 						rc = OPT_RC_INVALID;
 						printf("Error: Requested block range start <%d> is "
 							   "greater than end <%d>.\n", blockStart, range);
+						exitCode = 1;
 						break;
 					}
 				}
@@ -265,6 +271,7 @@ ConsumeOptions(int numOptions, char **options)
 				rc = OPT_RC_INVALID;
 				printf("Error: Invalid block size requested <%s>.\n",
 					   optionString);
+				exitCode = 1;
 				break;
 			}
 		}
@@ -284,6 +291,7 @@ ConsumeOptions(int numOptions, char **options)
 			{
 				rc = OPT_RC_INVALID;
 				printf("Error: Missing segment size identifier.\n");
+				exitCode = 1;
 				break;
 			}
 
@@ -296,6 +304,7 @@ ConsumeOptions(int numOptions, char **options)
 				rc = OPT_RC_INVALID;
 				printf("Error: Invalid segment size requested <%s>.\n",
 					   optionString);
+				exitCode = 1;
 				break;
 			}
 		}
@@ -316,6 +325,7 @@ ConsumeOptions(int numOptions, char **options)
 			{
 				rc = OPT_RC_INVALID;
 				printf("Error: Missing segment number identifier.\n");
+				exitCode = 1;
 				break;
 			}
 
@@ -328,6 +338,7 @@ ConsumeOptions(int numOptions, char **options)
 				rc = OPT_RC_INVALID;
 				printf("Error: Invalid segment number requested <%s>.\n",
 					   optionString);
+				exitCode = 1;
 				break;
 			}
 		}
@@ -348,6 +359,7 @@ ConsumeOptions(int numOptions, char **options)
 				{
 					rc = OPT_RC_FILE;
 					printf("Error: Could not open file <%s>.\n", optionString);
+					exitCode = 1;
 					break;
 				}
 			}
@@ -361,6 +373,7 @@ ConsumeOptions(int numOptions, char **options)
 				{
 					rc = OPT_RC_FILE;
 					printf("Error: Missing file name to dump.\n");
+					exitCode = 1;
 				}
 				break;
 			}
@@ -374,6 +387,7 @@ ConsumeOptions(int numOptions, char **options)
 			{
 				rc = OPT_RC_INVALID;
 				printf("Error: Invalid option string <%s>.\n", optionString);
+				exitCode = 1;
 				break;
 			}
 
@@ -435,6 +449,7 @@ ConsumeOptions(int numOptions, char **options)
 							rc = OPT_RC_INVALID;
 							printf("Error: Options <y> and <x> are "
 								   "mutually exclusive.\n");
+							exitCode = 1;
 						}
 						break;
 
@@ -446,12 +461,14 @@ ConsumeOptions(int numOptions, char **options)
 							rc = OPT_RC_INVALID;
 							printf("Error: Options <x> and <y> are "
 								   "mutually exclusive.\n");
+							exitCode = 1;
 						}
 						break;
 
 					default:
 						rc = OPT_RC_INVALID;
 						printf("Error: Unknown option <%c>.\n", optionString[y]);
+						exitCode = 1;
 						break;
 				}
 
@@ -462,7 +479,10 @@ ConsumeOptions(int numOptions, char **options)
 	}
 
 	if (rc == OPT_RC_DUPLICATE)
+	{
 		printf("Error: Duplicate option listed <%c>.\n", duplicateSwitch);
+		exitCode = 1;
+	}
 
 	/* If the user requested a control file dump, a pure binary */
 	/* block dump or a non-interpreted formatted dump, mask off */
@@ -479,6 +499,7 @@ ConsumeOptions(int numOptions, char **options)
 				rc = OPT_RC_INVALID;
 				printf("Error: Invalid options used for Control File dump.\n"
 					   "       Only options <Sf> may be used with <c>.\n");
+				exitCode = 1;
 			}
 			else
 			{
@@ -546,8 +567,12 @@ GetBlockSize()
 	if (bytesRead == pageHeaderSize)
 		localSize = (unsigned int) PageGetPageSize(&localCache);
 	else
+	{
 		printf("Error: Unable to read full page header from block 0.\n"
-			   "  ===> Read %u bytes", bytesRead);
+			   "  ===> Read %u bytes\n", bytesRead);
+		exitCode = 1;
+	}
+
 	return (localSize);
 }
 
@@ -787,7 +812,10 @@ FormatHeader(Page page, BlockNumber blkno)
 			|| (pageHeader->pd_lower > blockSize)
 			|| (pageHeader->pd_upper < pageHeader->pd_lower)
 			|| (pageHeader->pd_special > blockSize))
+		{
 			printf(" Error: Invalid header information.\n\n");
+			exitCode = 1;
+		}
 
 		if (blockOptions & BLOCK_CHECKSUMS)
 		{
@@ -795,17 +823,23 @@ FormatHeader(Page page, BlockNumber blkno)
 			uint16	calc_checksum = pg_checksum_page(page, delta + blkno);
 
 			if (calc_checksum != pageHeader->pd_checksum)
+			{
 				printf(" Error: checksum failure: calculated 0x%04x.\n\n",
 					   calc_checksum);
+				exitCode = 1;
+			}
 		}
 	}
 
 	/* If we have reached the end of file while interpreting the header, let */
 	/* the user know about it */
 	if (rc == EOF_ENCOUNTERED)
+	{
 		printf
 			(" Error: End of block encountered within the header."
 			 " Bytes read: %4u.\n\n", bytesToFormat);
+		exitCode = 1;
+	}
 
 	/* A request to dump the formatted binary of the block (header, */
 	/* items and special section).  It's best to dump even on an error */
@@ -840,8 +874,11 @@ FormatItemBlock(Page page)
 	if (maxOffset == 0)
 		printf(" Empty block - no items listed \n\n");
 	else if ((maxOffset < 0) || (maxOffset > blockSize))
+	{
 		printf(" Error: Item index corrupt on block. Offset: <%d>.\n\n",
 			   maxOffset);
+		exitCode = 1;
+	}
 	else
 	{
 		int			formatAs;
@@ -914,9 +951,12 @@ FormatItemBlock(Page page)
 			/* formatting */
 			if ((itemOffset + itemSize > blockSize) ||
 				(itemOffset + itemSize > bytesToFormat))
+			{
 				printf("  Error: Item contents extend beyond block.\n"
 				   "         BlockSize<%d> Bytes Read<%d> Item Start<%d>.\n",
 					   blockSize, bytesToFormat, itemOffset + itemSize);
+				exitCode = 1;
+			}
 			else
 			{
 				/* If the user requests that the items be interpreted as */
@@ -954,7 +994,10 @@ FormatItem(unsigned int numBytes, unsigned int startIndex,
 		if (numBytes < SizeOfIptrData)
 		{
 			if (numBytes)
+			{
 				printf("  Error: This item does not look like an index item.\n");
+				exitCode = 1;
+			}
 		}
 		else
 		{
@@ -970,8 +1013,11 @@ FormatItem(unsigned int numBytes, unsigned int startIndex,
 				   IndexTupleHasVarwidths(itup) ? 1 : 0);
 
 			if (numBytes != IndexTupleSize(itup))
+			{
 				printf("  Error: Item size difference. Given <%u>, "
 				   "Internal <%d>.\n", numBytes, (int) IndexTupleSize(itup));
+				exitCode = 1;
+			}
 		}
 	}
 	else if (formatAs == ITEM_SPG_INNER)
@@ -980,7 +1026,10 @@ FormatItem(unsigned int numBytes, unsigned int startIndex,
 		if (numBytes < SGITHDRSZ)
 		{
 			if (numBytes)
+			{
 				printf("  Error: This item does not look like an SPGiST item.\n");
+				exitCode = 1;
+			}
 		}
 		else
 		{
@@ -993,8 +1042,11 @@ FormatItem(unsigned int numBytes, unsigned int startIndex,
 				   itup->prefixSize);
 
 			if (numBytes != itup->size)
+			{
 				printf("  Error: Item size difference. Given <%u>, "
 					   "Internal <%d>.\n", numBytes, (int) itup->size);
+				exitCode = 1;
+			}
 			else if (itup->prefixSize == MAXALIGN(itup->prefixSize))
 			{
 				int			i;
@@ -1036,7 +1088,10 @@ FormatItem(unsigned int numBytes, unsigned int startIndex,
 		if (numBytes < SGLTHDRSZ)
 		{
 			if (numBytes)
+			{
 				printf("  Error: This item does not look like an SPGiST item.\n");
+				exitCode = 1;
+			}
 		}
 		else
 		{
@@ -1050,8 +1105,11 @@ FormatItem(unsigned int numBytes, unsigned int startIndex,
 				   itup->heapPtr.ip_posid);
 
 			if (numBytes != itup->size)
+			{
 				printf("  Error: Item size difference. Given <%u>, "
 					   "Internal <%d>.\n", numBytes, (int) itup->size);
+				exitCode = 1;
+			}
 		}
 	}
 	else
@@ -1062,7 +1120,10 @@ FormatItem(unsigned int numBytes, unsigned int startIndex,
 		if (numBytes < alignedSize)
 		{
 			if (numBytes)
+			{
 				printf("  Error: This item does not look like a heap item.\n");
+				exitCode = 1;
+			}
 		}
 		else
 		{
@@ -1169,10 +1230,14 @@ FormatItem(unsigned int numBytes, unsigned int startIndex,
 			 * array
 			 */
 			if (computedLength != localHoff)
+			{
 				printf
 					("  Error: Computed header length not equal to header size.\n"
 					 "         Computed <%u>  Header: <%d>\n", computedLength,
 					 localHoff);
+
+				exitCode = 1;
+			}
 			else if ((infoMask & HEAP_HASNULL) && bitmapLength)
 			{
 				printf("  t_bits: ");
@@ -1208,6 +1273,7 @@ FormatSpecial()
 		case SPEC_SECT_ERROR_UNKNOWN:
 		case SPEC_SECT_ERROR_BOUNDARY:
 			printf(" Error: Invalid special section encountered.\n");
+			exitCode = 1;
 			break;
 
 		case SPEC_SECT_SEQUENCE:
@@ -1362,6 +1428,7 @@ FormatSpecial()
 			/* No idea what type of special section this is */
 		default:
 			printf(" Unknown special section type. Type: <%u>.\n", specialType);
+			exitCode = 1;
 			break;
 	}
 
@@ -1369,8 +1436,12 @@ FormatSpecial()
 	if (blockOptions & BLOCK_FORMAT)
 	{
 		if (specialType == SPEC_SECT_ERROR_BOUNDARY)
+		{
 			printf(" Error: Special section points off page."
 				   " Unable to dump contents.\n");
+
+			exitCode = 1;
+		}
 		else
 			FormatBinary(specialSize, specialOffset);
 	}
@@ -1551,6 +1622,8 @@ FormatControl()
 		/* If we have an error, force a formatted dump so we can see */
 		/* where things are going wrong */
 		controlOptions |= CONTROL_FORMAT;
+
+		exitCode = 1;
 	}
 
 	/* Dump hex and ascii representation of data */
@@ -1640,6 +1713,7 @@ DumpFileContents()
 			printf("Error: Seek error encountered before requested "
 				   "start block <%d>.\n", blockStart);
 			contentsToDump = 0;
+			exitCode = 1;
 		}
 		else
 			currentBlock = blockStart;
@@ -1734,8 +1808,11 @@ main(int argv, char **argc)
 			if (buffer)
 				DumpFileContents();
 			else
+			{
 				printf("\nError: Unable to create buffer of size <%d>.\n",
 					   blockSize);
+				exitCode = 1;
+			}
 		}
 	}
 
@@ -1746,5 +1823,5 @@ main(int argv, char **argc)
 	if (buffer)
 		free(buffer);
 
-	exit(0);
+	exit(exitCode);
 }
