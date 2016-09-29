@@ -22,8 +22,8 @@
  * Original Author: Patrick Macdonald <patrickm@redhat.com>
  */
 
-#define FD_VERSION	"9.5.0"		/* version ID of pg_filedump */
-#define FD_PG_VERSION	"PostgreSQL 9.5.x"		/* PG version it works with */
+#define FD_VERSION	"9.6.0"		/* version ID of pg_filedump */
+#define FD_PG_VERSION	"PostgreSQL 9.6.x"		/* PG version it works with */
 
 #include "postgres.h"
 
