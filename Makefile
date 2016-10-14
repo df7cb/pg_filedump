@@ -3,7 +3,6 @@
 # note this must match version macros in pg_filedump.h
 FD_VERSION=9.6.0
 
-CC=gcc
 CFLAGS=-g -O -Wall -Wmissing-prototypes -Wmissing-declarations
 
 # If working with a PG source directory, point PGSQL_INCLUDE_DIR to its
