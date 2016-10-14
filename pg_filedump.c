@@ -991,7 +991,7 @@ FormatItem(unsigned int numBytes, unsigned int startIndex,
 	if (formatAs == ITEM_INDEX)
 	{
 		/* It is an IndexTuple item, so dump the index header */
-		if (numBytes < SizeOfIptrData)
+		if (numBytes < sizeof(ItemPointerData))
 		{
 			if (numBytes)
 			{
