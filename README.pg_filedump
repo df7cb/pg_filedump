@@ -59,7 +59,7 @@ not require any manual adjustments of the Makefile.
 ------------------------------------------------------------------------
 Invocation:
 
-pg_filedump [-abcdfhikxy] [-R startblock [endblock]] [-S blocksize] [-s segsize] [-n segnumber] file
+pg_filedump [-abcdfhikxy] [-R startblock [endblock]] [-D attrlist] [-S blocksize] [-s segsize] [-n segnumber] file
 
 Defaults are: relative addressing, range of the entire file, block size
               as listed on block 0 in the file
@@ -71,6 +71,8 @@ The following options are valid for heap and index files:
       off all formatting options)
   -d  Display formatted block content dump (Option will turn off
       all other formatting options)
+  -D  Try to decode tuples using provided list of attribute types.
+      [attrlist] should be something like int,timestamp,bool,uuid
   -f  Display formatted block content dump along with interpretation
   -h  Display this information
   -i  Display interpreted item details

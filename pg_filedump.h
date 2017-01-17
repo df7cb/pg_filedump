@@ -52,7 +52,8 @@ typedef enum blockSwitches
 	BLOCK_FORCED = 0x00000008,	/* -S: Block size forced */
 	BLOCK_NO_INTR = 0x00000010, /* -d: Dump straight blocks */
 	BLOCK_RANGE = 0x00000020,	/* -R: Specific block range to dump */
-	BLOCK_CHECKSUMS = 0x00000040	/* -k: verify block checksums */
+	BLOCK_CHECKSUMS = 0x00000040,	/* -k: verify block checksums */
+	BLOCK_DECODE = 0x00000080	/* -D: Try to decode tuples */
 } blockSwitches;
 
 /* Segment-related options */

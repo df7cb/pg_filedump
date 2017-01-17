@@ -32,6 +32,7 @@
 
 #include "storage/checksum.h"
 #include "storage/checksum_impl.h"
+#include "decode.h"
 
 /***
  * Global variables for ease of use mostly
@@ -104,7 +105,7 @@ DisplayOptions(unsigned int validOptions)
 			 FD_VERSION, FD_PG_VERSION);
 
 	printf
-		("\nUsage: pg_filedump [-abcdfhikxy] [-R startblock [endblock]] [-S blocksize] [-s segsize] [-n segnumber] file\n\n"
+		("\nUsage: pg_filedump [-abcdfhikxy] [-R startblock [endblock]] [-D attrlist] [-S blocksize] [-s segsize] [-n segnumber] file\n\n"
 	   "Display formatted contents of a PostgreSQL heap/index/control file\n"
 	   "Defaults are: relative addressing, range of the entire file, block\n"
 		 "               size as listed on block 0 in the file\n\n"
@@ -115,6 +116,8 @@ DisplayOptions(unsigned int validOptions)
 		 "      off all formatting options)\n"
 		 "  -d  Display formatted block content dump (Option will turn off\n"
 		 "      all other formatting options)\n"
+		 "  -D  Try to decode tuples using provided list of attribute types.\n"
+		 "      [attrlist] should be something like int,timestamp,bool,uuid\n"
 	 "  -f  Display formatted block content dump along with interpretation\n"
 		 "  -h  Display this information\n"
 		 "  -i  Display interpreted item details\n"
@@ -303,6 +306,36 @@ ConsumeOptions(int numOptions, char **options)
 			{
 				rc = OPT_RC_INVALID;
 				printf("Error: Invalid segment size requested <%s>.\n",
+					   optionString);
+				exitCode = 1;
+				break;
+			}
+		}
+		/* Check for the special case where the user forces tuples decoding. */
+		else if((optionStringLength == 2)
+				&& (strcmp(optionString, "-D") == 0))
+		{
+			SET_OPTION(blockOptions, BLOCK_DECODE, 'D');
+			/* Only accept the decode option once */
+			if (rc == OPT_RC_DUPLICATE)
+				break;
+
+			/* The token immediately following -D is attrubute types string */
+			if (x >= (numOptions - 2))
+			{
+				rc = OPT_RC_INVALID;
+				printf("Error: Missing attribute types string.\n");
+				exitCode = 1;
+				break;
+			}
+
+			/* Next option encountered must be attribute types string */
+			optionString = options[++x];
+
+			if(ParseAttributeTypesString(optionString) < 0)
+			{
+				rc = OPT_RC_INVALID;
+				printf("Error: Invalid attribute types string <%s>.\n",
 					   optionString);
 				exitCode = 1;
 				break;
@@ -967,6 +1000,10 @@ FormatItemBlock(Page page)
 				/* Dump the items contents in hex and ascii */
 				if (blockOptions & BLOCK_FORMAT)
 					FormatBinary(itemSize, itemOffset);
+
+				/* Decode tuple data */
+				if(blockOptions & BLOCK_DECODE)
+					FormatDecode(&buffer[itemOffset], itemSize);
 
 				if (x == maxOffset)
 					printf("\n");

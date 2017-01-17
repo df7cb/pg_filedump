@@ -14,15 +14,24 @@ PGSQL_LIB_DIR=$(shell $(PG_CONFIG) --libdir)
 PGSQL_BIN_DIR=$(shell $(PG_CONFIG) --bindir)
 
 DISTFILES= README.pg_filedump Makefile Makefile.contrib \
-	pg_filedump.h pg_filedump.c
+	pg_filedump.h pg_filedump.c decode.h decode.c stringinfo.c pg_lzcompress.c
 
 all: pg_filedump
 
-pg_filedump: pg_filedump.o
-	${CC} ${PGSQL_LDFLAGS} ${LDFLAGS} -o pg_filedump pg_filedump.o -L${PGSQL_LIB_DIR} -lpgport
+pg_filedump: pg_filedump.o decode.o stringinfo.o pg_lzcompress.o
+	${CC} ${PGSQL_LDFLAGS} ${LDFLAGS} -o pg_filedump pg_filedump.o decode.o stringinfo.o pg_lzcompress.o -L${PGSQL_LIB_DIR} -lpgport
 
 pg_filedump.o: pg_filedump.c
 	${CC} ${PGSQL_CFLAGS} ${CFLAGS} -I${PGSQL_INCLUDE_DIR} pg_filedump.c -c
+
+decode.o: decode.c
+	${CC} ${PGSQL_CFLAGS} ${CFLAGS} -I${PGSQL_INCLUDE_DIR} decode.c -c
+
+stringinfo.o: stringinfo.c
+	${CC} ${PGSQL_CFLAGS} ${CFLAGS} -I${PGSQL_INCLUDE_DIR} stringinfo.c -c
+
+pg_lzcompress.o: pg_lzcompress.c
+	${CC} ${PGSQL_CFLAGS} ${CFLAGS} -I${PGSQL_INCLUDE_DIR} pg_lzcompress.c -c
 
 dist:
 	rm -rf pg_filedump-${FD_VERSION} pg_filedump-${FD_VERSION}.tar.gz
