@@ -71,8 +71,36 @@ The following options are valid for heap and index files:
       off all formatting options)
   -d  Display formatted block content dump (Option will turn off
       all other formatting options)
-  -D  Try to decode tuples using provided list of attribute types.
-      [attrlist] should be something like int,timestamp,bool,uuid
+  -D  Try to decode tuples using given comma separated list of types.
+      List of supported types:
+        * bigint
+        * bigserial
+        * bool
+        * char
+        * charN     -- char(n)
+        * date
+        * float
+        * float4
+        * float8
+        * int
+        * json
+        * macaddr
+        * name
+        * oid
+        * real
+        * serial
+        * smallint
+        * smallserial
+        * text
+        * time
+        * timestamp
+        * timetz
+        * uuid
+		* varchar
+        * varcharN -- varchar(n)
+        * xid
+        * xml
+        * ~        -- ignores are attributes left in a tuple
   -f  Display formatted block content dump along with interpretation
   -h  Display this information
   -i  Display interpreted item details

@@ -54,6 +54,15 @@ decode_macaddr(const char* buffer, unsigned int buff_size, unsigned int* out_siz
 static int
 decode_string(const char* buffer, unsigned int buff_size, unsigned int* out_size);
 
+static int
+decode_char(const char* buffer, unsigned int buff_size, unsigned int* out_size);
+
+static int
+decode_name(const char* buffer, unsigned int buff_size, unsigned int* out_size);
+
+static int
+decode_ignore(const char* buffer, unsigned int buff_size, unsigned int* out_size);
+
 static int ncallbacks = 0;
 static decode_callback_t callbacks[ATTRTYPES_STR_MAX_LEN / 2] = { NULL };
 
@@ -66,6 +75,8 @@ static ParseCallbackTableItem callback_table[] = {
 	{ "smallserial", &decode_smallint },
 	{ "smallint", &decode_smallint },
 	{ "int", &decode_int },
+	{ "oid", &decode_int },
+	{ "xid", &decode_int },
 	{ "serial", &decode_int },
 	{ "bigint", &decode_bigint },
 	{ "bigserial", &decode_bigint },
@@ -73,16 +84,21 @@ static ParseCallbackTableItem callback_table[] = {
 	{ "timetz", &decode_timetz },
 	{ "date", &decode_date },
 	{ "timestamp", &decode_timestamp },
+	{ "real", &decode_float4 },
 	{ "float4", &decode_float4 },
 	{ "float8", &decode_float8 },
 	{ "float", &decode_float8 },
 	{ "bool", &decode_bool },
 	{ "uuid", &decode_uuid },
 	{ "macaddr", &decode_macaddr },
+	{ "name", &decode_name },
+	{ "char", &decode_char },
+	{ "~", &decode_ignore },
 
 	/* internally all string types are stored the same way */
-	{ "char", &decode_string },
+	{ "charN", &decode_string },
 	{ "varchar", &decode_string },
+	{ "varcharN", &decode_string },
 	{ "text", &decode_string },
 	{ "json", &decode_string },
 	{ "xml", &decode_string },
@@ -651,6 +667,47 @@ decode_bool(const char* buffer, unsigned int buff_size, unsigned int* out_size)
 
 	CopyAppend(*(bool*)buffer ? "t" : "f");
 	*out_size = sizeof(bool);
+	return 0;
+}
+
+/* Decode a name type (used mostly in catalog tables) */
+static int
+decode_name(const char* buffer, unsigned int buff_size, unsigned int* out_size)
+{
+	const char* new_buffer = (const char*)TYPEALIGN(sizeof(uint32), (uintptr_t)buffer);
+	unsigned int delta = (unsigned int)( (uintptr_t)new_buffer - (uintptr_t)buffer );
+
+	if(buff_size < delta)
+		return -1;
+
+	buff_size -= delta;
+	buffer = new_buffer;
+
+	if(buff_size < NAMEDATALEN)
+		return -2;
+
+	CopyAppendEncode(buffer, strnlen(buffer, NAMEDATALEN));
+	*out_size = NAMEDATALEN + delta;
+	return 0;
+}
+
+/* Decode a char type */
+static int
+decode_char(const char* buffer, unsigned int buff_size, unsigned int* out_size)
+{
+	if(buff_size < sizeof(char))
+		return -2;
+
+	CopyAppendEncode(buffer, 1);
+	*out_size = 1;
+	return 0;
+}
+
+/* Ignore all data left */
+static int
+decode_ignore(const char* buffer, unsigned int buff_size, unsigned int* out_size)
+{
+	*out_size = buff_size;
 	return 0;
 }
 

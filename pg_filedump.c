@@ -116,8 +116,8 @@ DisplayOptions(unsigned int validOptions)
 		 "      off all formatting options)\n"
 		 "  -d  Display formatted block content dump (Option will turn off\n"
 		 "      all other formatting options)\n"
-		 "  -D  Try to decode tuples using provided list of attribute types.\n"
-		 "      [attrlist] should be something like int,timestamp,bool,uuid\n"
+		 "  -D  Try to decode tuples using given comma separated list of types.\n"
+		 "      For full list of supported attribyte types see README file.\n"
 	 "  -f  Display formatted block content dump along with interpretation\n"
 		 "  -h  Display this information\n"
 		 "  -i  Display interpreted item details\n"
@@ -1002,7 +1002,7 @@ FormatItemBlock(Page page)
 					FormatBinary(itemSize, itemOffset);
 
 				/* Decode tuple data */
-				if(blockOptions & BLOCK_DECODE)
+				if((blockOptions & BLOCK_DECODE) && (itemFlags == LP_NORMAL))
 					FormatDecode(&buffer[itemOffset], itemSize);
 
 				if (x == maxOffset)
