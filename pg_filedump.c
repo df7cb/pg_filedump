@@ -1616,8 +1616,7 @@ FormatControl()
 			   "            XLOG Segment Size: %u\n"
 			   "    Maximum Identifier Length: %u\n"
 			   "           Maximum Index Keys: %u\n"
-			   "             TOAST Chunk Size: %u\n"
-			   "   Date and Time Type Storage: %s\n\n",
+			   "             TOAST Chunk Size: %u\n\n",
 			   EQ_CRC32C(crcLocal,
 						controlData->crc) ? "Correct" : "Not Correct",
 			   controlData->pg_control_version,
@@ -1646,9 +1645,7 @@ FormatControl()
 			   controlData->xlog_seg_size,
 			   controlData->nameDataLen,
 			   controlData->indexMaxKeys,
-			   controlData->toast_max_chunk_size,
-			   (controlData->enableIntTimes ?
-				"64 bit Integers" : "Floating Point"));
+			   controlData->toast_max_chunk_size);
 	}
 	else
 	{
