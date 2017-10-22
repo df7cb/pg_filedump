@@ -71,7 +71,7 @@ The following options are valid for heap and index files:
       off all formatting options)
   -d  Display formatted block content dump (Option will turn off
       all other formatting options)
-  -D  Try to decode tuples using given comma separated list of types.
+  -D  Decode tuples using given comma separated list of types.
       List of supported types:
         * bigint
         * bigserial
@@ -96,11 +96,11 @@ The following options are valid for heap and index files:
         * timestamp
         * timetz
         * uuid
-		* varchar
+        * varchar
         * varcharN -- varchar(n)
         * xid
         * xml
-        * ~        -- ignores are attributes left in a tuple
+        * ~        -- ignores all attributes left in a tuple
   -f  Display formatted block content dump along with interpretation
   -h  Display this information
   -i  Display interpreted item details
