@@ -1,7 +1,7 @@
 # View README.pg_filedump first
 
 # note this must match version macros in pg_filedump.h
-FD_VERSION=9.6.0
+FD_VERSION=10.0
 
 # If working with a PG source directory, point PGSQL_INCLUDE_DIR to its
 # src/include subdirectory.  If working with an installed tree, point to
