@@ -1,5 +1,5 @@
 PROGRAM = pg_filedump
-OBJS	= pg_filedump.o
+OBJS	= decode.o pg_filedump.o pg_lzcompress.o stringinfo.o
 
 DOCS = README.pg_filedump
 
