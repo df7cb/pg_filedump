@@ -809,8 +809,7 @@ decode_string(const char *buffer, unsigned int buff_size, unsigned int *out_size
 		/*
 		 * 00000001 1-byte length word, unaligned, TOAST pointer
 		 */
-		uint8		tag = VARTAG_1B_E(buffer);
-		uint32		len = VARTAG_SIZE(tag);
+		uint32		len = VARSIZE_EXTERNAL(buffer);
 
 		if (len > buff_size)
 			return -1;
