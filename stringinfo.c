@@ -36,7 +36,7 @@
 void
 initStringInfo(StringInfo str)
 {
-	int		 size = 1024;	/* initial default buffer size */
+	int			size = 1024;	/* initial default buffer size */
 
 	str->data = (char *) malloc(size);
 	str->maxlen = size;
@@ -111,7 +111,7 @@ enlargeStringInfo(StringInfo str, int needed)
 {
 	Size		newlen;
 	Size		limit;
-	char* old_data;
+	char	   *old_data;
 
 	limit = MaxAllocSize;
 
@@ -119,7 +119,7 @@ enlargeStringInfo(StringInfo str, int needed)
 	 * Guard against out-of-range "needed" values.  Without this, we can get
 	 * an overflow or infinite loop in the following.
 	 */
-	if (needed < 0)			 /* should not happen */
+	if (needed < 0)				/* should not happen */
 	{
 		printf("Error: invalid string enlargement request size: %d", needed);
 		exit(1);
@@ -128,16 +128,16 @@ enlargeStringInfo(StringInfo str, int needed)
 	if (((Size) needed) >= (limit - (Size) str->len))
 	{
 		printf("Error: cannot enlarge string buffer containing %d bytes by %d more bytes.",
-			str->len, needed);
+			   str->len, needed);
 		exit(1);
 	}
 
-	needed += str->len + 1;	 /* total space required now */
+	needed += str->len + 1;		/* total space required now */
 
 	/* Because of the above test, we now have needed <= limit */
 
 	if (needed <= str->maxlen)
-		return;				 /* got enough space already */
+		return;					/* got enough space already */
 
 	/*
 	 * We don't want to allocate just a little more space with each append;
@@ -158,7 +158,7 @@ enlargeStringInfo(StringInfo str, int needed)
 
 	old_data = str->data;
 	str->data = (char *) realloc(str->data, (Size) newlen);
-	if(str->data == NULL)
+	if (str->data == NULL)
 	{
 		free(old_data);
 		printf("Error: realloc() failed!\n");
@@ -167,4 +167,3 @@ enlargeStringInfo(StringInfo str, int needed)
 
 	str->maxlen = newlen;
 }
-

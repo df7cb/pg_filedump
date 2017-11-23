@@ -62,8 +62,8 @@ static unsigned int segmentOptions = 0;
 typedef enum segmentSwitches
 {
 	SEGMENT_SIZE_FORCED = 0x00000001,	/* -s: Segment size forced */
-	SEGMENT_NUMBER_FORCED = 0x00000002,	/* -n: Segment number forced */
-} segmentSwitches;
+	SEGMENT_NUMBER_FORCED = 0x00000002, /* -n: Segment number forced */
+}			segmentSwitches;
 
 /* -R[start]:Block range start */
 static int	blockStart = -1;
@@ -89,8 +89,8 @@ static unsigned int controlOptions = 0;
 typedef enum controlSwitches
 {
 	CONTROL_DUMP = 0x00000001,	/* -c: Dump control file */
-	CONTROL_FORMAT = BLOCK_FORMAT,		/* -f: Formatted dump of control file */
-	CONTROL_FORCED = BLOCK_FORCED		/* -S: Block size forced */
+	CONTROL_FORMAT = BLOCK_FORMAT,	/* -f: Formatted dump of control file */
+	CONTROL_FORCED = BLOCK_FORCED	/* -S: Block size forced */
 } controlSwitches;
 
 /* Possible value types for the Special Section */
@@ -105,13 +105,13 @@ typedef enum specialSectionTypes
 	SPEC_SECT_INDEX_SPGIST,		/* SP - GIST index info in special section */
 	SPEC_SECT_ERROR_UNKNOWN,	/* Unknown error */
 	SPEC_SECT_ERROR_BOUNDARY	/* Boundary error */
-}	specialSectionTypes;
+}			specialSectionTypes;
 
 static unsigned int specialType = SPEC_SECT_NONE;
 
-/*	Possible return codes from option validation routine. */
-/*	pg_filedump doesn't do much with them now but maybe in */
-/*	the future... */
+/* Possible return codes from option validation routine.
+ * pg_filedump doesn't do much with them now but maybe in
+ * the future... */
 typedef enum optionReturnCodes
 {
 	OPT_RC_VALID,				/* All options are valid */
@@ -119,10 +119,10 @@ typedef enum optionReturnCodes
 	OPT_RC_FILE,				/* File problems */
 	OPT_RC_DUPLICATE,			/* Duplicate option encountered */
 	OPT_RC_COPYRIGHT			/* Copyright should be displayed */
-}	optionReturnCodes;
+}			optionReturnCodes;
 
-/*	Simple macro to check for duplicate options and then set */
-/*	an option flag for later consumption */
+/* Simple macro to check for duplicate options and then set
+ * an option flag for later consumption */
 #define SET_OPTION(_x,_y,_z) if (_x & _y)				\
 							   {						\
 								 rc = OPT_RC_DUPLICATE; \
