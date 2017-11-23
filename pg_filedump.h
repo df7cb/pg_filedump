@@ -46,14 +46,16 @@ static unsigned int blockOptions = 0;
 
 typedef enum blockSwitches
 {
-	BLOCK_ABSOLUTE = 0x00000001,	/* -a: Absolute(vs Relative) addressing */
-	BLOCK_BINARY = 0x00000002,	/* -b: Binary dump of block */
-	BLOCK_FORMAT = 0x00000004,	/* -f: Formatted dump of blocks / control file */
-	BLOCK_FORCED = 0x00000008,	/* -S: Block size forced */
-	BLOCK_NO_INTR = 0x00000010, /* -d: Dump straight blocks */
-	BLOCK_RANGE = 0x00000020,	/* -R: Specific block range to dump */
-	BLOCK_CHECKSUMS = 0x00000040,	/* -k: verify block checksums */
-	BLOCK_DECODE = 0x00000080	/* -D: Try to decode tuples */
+	BLOCK_ABSOLUTE = 0x00000001,		/* -a: Absolute(vs Relative) addressing */
+	BLOCK_BINARY = 0x00000002,			/* -b: Binary dump of block */
+	BLOCK_FORMAT = 0x00000004,			/* -f: Formatted dump of blocks / control file */
+	BLOCK_FORCED = 0x00000008,			/* -S: Block size forced */
+	BLOCK_NO_INTR = 0x00000010,			/* -d: Dump straight blocks */
+	BLOCK_RANGE = 0x00000020,			/* -R: Specific block range to dump */
+	BLOCK_CHECKSUMS = 0x00000040,		/* -k: verify block checksums */
+	BLOCK_DECODE = 0x00000080,			/* -D: Try to decode tuples */
+	BLOCK_DECODE_TOAST = 0x00000100,	/* -t: Try to decode TOAST values */
+	BLOCK_IGNORE_OLD = 0x00000200		/* -o: Decode old values */
 } blockSwitches;
 
 /* Segment-related options */

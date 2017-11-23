@@ -126,6 +126,7 @@ DisplayOptions(unsigned int validOptions)
 		 "  -h  Display this information\n"
 		 "  -i  Display interpreted item details\n"
 		 "  -k  Verify block checksums\n"
+		 "  -o  Do not dump old values.\n"
 		 "  -R  Display specific block ranges within the file (Blocks are\n"
 		 "      indexed from 0)\n"
 		 "        [startblock]: block to start at\n"
@@ -474,6 +475,11 @@ ConsumeOptions(int numOptions, char **options)
 						/* Verify block checksums */
 					case 'k':
 						SET_OPTION(blockOptions, BLOCK_CHECKSUMS, 'k');
+						break;
+
+						/* Display old values. Ignore Xmax */
+					case 'o':
+						SET_OPTION(blockOptions, BLOCK_IGNORE_OLD, 'o');
 						break;
 
 						/* Interpret items as standard index values */
@@ -994,6 +1000,9 @@ FormatItemBlock(Page page)
 			}
 			else
 			{
+				HeapTupleHeader tuple_header;
+				TransactionId xmax;
+
 				/* If the user requests that the items be interpreted as
 				 * heap or index items... */
 				if (itemOptions & ITEM_DETAIL)
@@ -1003,8 +1012,13 @@ FormatItemBlock(Page page)
 				if (blockOptions & BLOCK_FORMAT)
 					FormatBinary(itemSize, itemOffset);
 
-				/* Decode tuple data */
-				if ((blockOptions & BLOCK_DECODE) && (itemFlags == LP_NORMAL))
+				/* Check if tuple was deleted */
+				tuple_header = (HeapTupleHeader) (&buffer[itemOffset]);
+				xmax = HeapTupleHeaderGetRawXmax(tuple_header);
+				if ((blockOptions & BLOCK_IGNORE_OLD) && (xmax != 0))
+					printf("tuple was removed by transaction #%d\n", xmax);
+				else if ((blockOptions & BLOCK_DECODE) && (itemFlags == LP_NORMAL))
+					/* Decode tuple data */
 					FormatDecode(&buffer[itemOffset], itemSize);
 
 				if (x == maxOffset)
