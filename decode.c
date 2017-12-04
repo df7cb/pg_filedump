@@ -1,8 +1,10 @@
 #include "postgres.h"
 #include "decode.h"
+#include "pg_filedump.h"
 #include <lib/stringinfo.h>
 #include <access/htup_details.h>
 #include <access/tupmacs.h>
+#include <access/tuptoaster.h>
 #include <datatype/timestamp.h>
 #include <common/pg_lzcompress.h>
 #include <string.h>
@@ -11,6 +13,19 @@
 #include <assert.h>
 
 #define ATTRTYPES_STR_MAX_LEN (1024-1)
+
+static int
+ReadStringFromToast(const char *buffer,
+		unsigned int buff_size,
+		unsigned int* out_size);
+
+/*
+ * Utilities for manipulation of header information for compressed
+ * toast entries.
+ */
+#define TOAST_COMPRESS_RAWSIZE(ptr) (*(uint32 *) ptr)
+#define TOAST_COMPRESS_RAWDATA(ptr) (ptr + sizeof(uint32))
+#define TOAST_COMPRESS_HEADER_SIZE (sizeof(uint32))
 
 typedef int (*decode_callback_t) (const char *buffer, unsigned int buff_size,
 								  unsigned int *out_size);
@@ -810,13 +825,22 @@ decode_string(const char *buffer, unsigned int buff_size, unsigned int *out_size
 		 * 00000001 1-byte length word, unaligned, TOAST pointer
 		 */
 		uint32		len = VARSIZE_EXTERNAL(buffer);
+		int			result = 0;
 
 		if (len > buff_size)
 			return -1;
 
-		CopyAppend("(TOASTED)");
+		if (blockOptions & BLOCK_DECODE_TOAST)
+		{
+			result = ReadStringFromToast(buffer, buff_size, out_size);
+		}
+		else
+		{
+			CopyAppend("(TOASTED)");
+		}
+
 		*out_size = padding + len;
-		return 0;
+		return result;
 	}
 
 	if (VARATT_IS_1B(buffer))
@@ -946,4 +970,264 @@ FormatDecode(const char *tupleData, unsigned int tupleSize)
 	}
 
 	CopyFlush();
+}
+
+static int DumpCompressedString(const char *data, int32 decompressed_size)
+{
+	int		decompress_ret;
+	char   *decompress_tmp_buff = malloc(TOAST_COMPRESS_RAWSIZE(data));
+
+	decompress_ret = pglz_decompress(TOAST_COMPRESS_RAWDATA(data),
+			decompressed_size - TOAST_COMPRESS_HEADER_SIZE,
+			decompress_tmp_buff, TOAST_COMPRESS_RAWSIZE(data));
+	if ((decompress_ret != TOAST_COMPRESS_RAWSIZE(data)) ||
+			(decompress_ret < 0))
+	{
+		printf("WARNING: Unable to decompress a string. Data is corrupted.\n");
+		printf("Returned %d while expected %d.\n", decompress_ret,
+				decompressed_size);
+	}
+	else
+	{
+		CopyAppendEncode(decompress_tmp_buff, *((uint32 *)data));
+	}
+
+	free(decompress_tmp_buff);
+
+	return decompress_ret;
+}
+
+static int
+ReadStringFromToast(const char *buffer,
+		unsigned int buff_size,
+		unsigned int* out_size)
+{
+	int		result = 0;
+
+	/* If toasted value is on disk, we'll try to restore it. */
+	if (VARATT_IS_EXTERNAL_ONDISK(buffer))
+	{
+		varatt_external toast_ptr;
+		char	   *toast_data = NULL;
+		/* Number of chunks the TOAST data is divided into */
+		int32		num_chunks;
+		/* Actual size of external TOASTed value */
+		int32		toast_ext_size;
+		/* Path to directory with TOAST realtion file */
+		char	   *toast_relation_path;
+		/* Filename of TOAST relation file */
+		char		toast_relation_filename[MAXPGPATH];
+		FILE	   *toast_rel_fp;
+		unsigned int block_options = 0;
+		unsigned int control_options = 0;
+
+		VARATT_EXTERNAL_GET_POINTER(toast_ptr, buffer);
+		printf("  TOAST value. Raw size: %8d, external size: %8d, "
+				"value id: %6d, toast relation id: %6d\n",
+				toast_ptr.va_rawsize,
+				toast_ptr.va_extsize,
+				toast_ptr.va_valueid,
+				toast_ptr.va_toastrelid);
+
+		/* Extract TOASTed value */
+		toast_ext_size = toast_ptr.va_extsize;
+		num_chunks = (toast_ext_size - 1) / TOAST_MAX_CHUNK_SIZE + 1;
+		printf("  Number of chunks: %d\n", num_chunks);
+
+		/* Open TOAST relation file */
+		toast_relation_path = strdup(fileName);
+		get_parent_directory(toast_relation_path);
+		sprintf(toast_relation_filename, "%s/%d", toast_relation_path,
+				toast_ptr.va_toastrelid);
+		printf("  Read TOAST relation %s\n", toast_relation_filename);
+		toast_rel_fp = fopen(toast_relation_filename, "rb");
+		if (!toast_rel_fp) {
+			printf("Cannot open TOAST relation %s\n",
+					toast_relation_filename);
+			result = -1;
+		}
+
+		if (result == 0)
+		{
+			unsigned int toast_relation_block_size = GetBlockSize(toast_rel_fp);
+			fseek(toast_rel_fp, 0, SEEK_SET);
+			toast_data = malloc(toast_ptr.va_rawsize);
+
+			result = DumpFileContents(block_options,
+					control_options,
+					toast_rel_fp,
+					toast_relation_block_size,
+					-1, /* no start block */
+					-1, /* no end block */
+					true, /* is toast relation */
+					toast_ptr.va_valueid,
+					toast_ptr.va_extsize,
+					toast_data);
+
+			if (result == 0)
+			{
+				if (VARATT_EXTERNAL_IS_COMPRESSED(toast_ptr))
+					result = DumpCompressedString(toast_data, toast_ext_size);
+				else
+					CopyAppendEncode(toast_data, toast_ext_size);
+			}
+			else
+			{
+				printf("Error in TOAST file.\n");
+			}
+
+			free(toast_data);
+		}
+
+		fclose(toast_rel_fp);
+		free(toast_relation_path);
+	}
+	/* If tag is indirect or expanded, it was stored in memory. */
+	else
+	{
+		CopyAppend("(TOASTED IN MEMORY)");
+	}
+
+	return result;
+}
+
+/* Decode an Oid as int type and pass value out. */
+static int
+DecodeOidBinary(const char *buffer,
+		unsigned int buff_size,
+		unsigned int *processed_size,
+		Oid *result)
+{
+	const char	   *new_buffer =
+		(const char*)TYPEALIGN(sizeof(Oid), (uintptr_t)buffer);
+	unsigned int	delta =
+		(unsigned int)((uintptr_t)new_buffer - (uintptr_t)buffer);
+
+	if (buff_size < delta)
+		return -1;
+
+	buff_size -= delta;
+	buffer = new_buffer;
+
+	if (buff_size < sizeof(int32))
+		return -2;
+
+	*result = *(Oid *)buffer;
+	*processed_size = sizeof(Oid) + delta;
+
+	return 0;
+}
+
+/* Decode char(N), varchar(N), text, json or xml types and pass data out. */
+static int
+DecodeBytesBinary(const char *buffer,
+		unsigned int buff_size,
+		unsigned int *processed_size,
+		char *out_data,
+		unsigned int *out_length)
+{
+	if (!VARATT_IS_EXTENDED(buffer))
+	{
+		*out_length = VARSIZE(buffer) - VARHDRSZ;
+
+		*processed_size = VARSIZE(buffer);
+		memcpy(out_data, VARDATA(buffer), *out_length);
+	}
+	else
+	{
+		printf("Error: unable read TOAST value.\n");
+	}
+
+	return 0;
+}
+
+/*
+ * Decode a TOAST chunk as a tuple (Oid toast_id, Oid chunk_id, text data).
+ * If decoded OID is equal toast_oid, copy data into chunk_data.
+ *
+ * Parameters:
+ *     tuple_data - data of the tuple
+ *     tuple_size - length of the tuple
+ *     toast_oid - [out] oid of the TOAST value
+ *     chunk_id - [out] number of the TOAST chunk stored in the tuple
+ *     chunk - [out] extracted chunk data
+ *     chunk_size - [out] number of bytes extracted from the chunk
+ */
+void
+ToastChunkDecode(const char *tuple_data,
+		unsigned int tuple_size,
+		Oid toast_oid,
+		uint32 *chunk_id,
+		char *chunk_data,
+		unsigned int *chunk_data_size)
+{
+	HeapTupleHeader		header = (HeapTupleHeader)tuple_data;
+	const char	   *data = tuple_data + header->t_hoff;
+	unsigned int	size = tuple_size - header->t_hoff;
+	unsigned int	processed_size = 0;
+	Oid				read_toast_oid;
+	int				ret;
+
+	*chunk_data_size = 0;
+	*chunk_id = 0;
+
+	/* decode toast_id */
+	ret = DecodeOidBinary(data, size, &processed_size, &read_toast_oid);
+	if (ret < 0)
+	{
+		printf("Error: unable to decode a TOAST tuple toast_id, "
+				"decode function returned %d. Partial data: %s\n",
+				ret, copyString.data);
+		return;
+	}
+
+	size -= processed_size;
+	data += processed_size;
+	if (size <= 0)
+	{
+		printf("Error: unable to decode a TOAST chunk tuple, no more bytes "
+			   "left. Partial data: %s\n", copyString.data);
+		return;
+	}
+
+	/* It is not what we are looking for */
+	if (toast_oid != read_toast_oid)
+		return;
+
+	/* decode chunk_id */
+	ret = DecodeOidBinary(data, size, &processed_size, chunk_id);
+	if (ret < 0)
+	{
+		printf("Error: unable to decode a TOAST tuple chunk_id, decode "
+				"function returned %d. Partial data: %s\n",
+				ret, copyString.data);
+		return;
+	}
+
+	size -= processed_size;
+	data += processed_size;
+	if (size <= 0)
+	{
+		printf("Error: unable to decode a TOAST chunk tuple, no more bytes "
+				"left. Partial data: %s\n", copyString.data);
+		return;
+	}
+
+	/* decode data */
+	ret = DecodeBytesBinary(data, size, &processed_size, chunk_data,
+			chunk_data_size);
+	if (ret < 0)
+	{
+		printf("Error: unable to decode a TOAST chunk data, decode function "
+				"returned %d. Partial data: %s\n", ret, copyString.data);
+		return;
+	}
+
+	size -= processed_size;
+	if (size != 0)
+	{
+		printf("Error: unable to decode a TOAST chunk tuple, %d bytes left. "
+				"Partial data: %s\n", size, copyString.data);
+		return;
+	}
 }

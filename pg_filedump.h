@@ -42,7 +42,7 @@
 #include "storage/bufpage.h"
 
 /*	Options for Block formatting operations */
-static unsigned int blockOptions = 0;
+extern unsigned int blockOptions;
 
 typedef enum blockSwitches
 {
@@ -59,7 +59,7 @@ typedef enum blockSwitches
 } blockSwitches;
 
 /* Segment-related options */
-static unsigned int segmentOptions = 0;
+extern unsigned int segmentOptions;
 
 typedef enum segmentSwitches
 {
@@ -68,13 +68,13 @@ typedef enum segmentSwitches
 }			segmentSwitches;
 
 /* -R[start]:Block range start */
-static int	blockStart = -1;
+extern int	blockStart;
 
 /* -R[end]:Block range end */
-static int	blockEnd = -1;
+extern int	blockEnd;
 
 /* Options for Item formatting operations */
-static unsigned int itemOptions = 0;
+extern unsigned int itemOptions;
 
 typedef enum itemSwitches
 {
@@ -86,7 +86,7 @@ typedef enum itemSwitches
 } itemSwitches;
 
 /* Options for Control File formatting operations */
-static unsigned int controlOptions = 0;
+extern unsigned int controlOptions;
 
 typedef enum controlSwitches
 {
@@ -109,7 +109,7 @@ typedef enum specialSectionTypes
 	SPEC_SECT_ERROR_BOUNDARY	/* Boundary error */
 }			specialSectionTypes;
 
-static unsigned int specialType = SPEC_SECT_NONE;
+extern unsigned int specialType;
 
 /* Possible return codes from option validation routine.
  * pg_filedump doesn't do much with them now but maybe in
@@ -136,3 +136,14 @@ typedef enum optionReturnCodes
 #define SEQUENCE_MAGIC 0x1717	/* PostgreSQL defined magic number */
 #define EOF_ENCOUNTERED (-1)	/* Indicator for partial read */
 #define BYTES_PER_LINE 16		/* Format the binary 16 bytes per line */
+
+extern char *fileName;
+
+/*
+ * Function Prototypes
+ */
+unsigned int GetBlockSize(FILE *fp);
+int DumpFileContents(unsigned int blockOptions, unsigned int controlOptions,
+					 FILE *fp, unsigned int blockSize, int blockStart,
+					int blockEnd, bool isToast, Oid toastOid,
+					unsigned int toastExternalSize, char *toastValue);

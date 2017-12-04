@@ -37,21 +37,36 @@
 /*
  * Global variables for ease of use mostly
  */
+/*	Options for Block formatting operations */
+unsigned int blockOptions = 0;
+
+/* Segment-related options */
+unsigned int segmentOptions = 0;
+
+/* -R[start]:Block range start */
+int	blockStart = -1;
+
+/* -R[end]:Block range end */
+int	blockEnd = -1;
+
+/* Options for Item formatting operations */
+unsigned int itemOptions = 0;
+
+/* Options for Control File formatting operations */
+unsigned int controlOptions = 0;
+
+unsigned int specialType = SPEC_SECT_NONE;
+
+static bool verbose = false;
 
 /* File to dump or format */
-static FILE *fp = NULL;
+FILE *fp = NULL;
 
 /* File name for display */
-static char *fileName = NULL;
-
-/* Cache for current block */
-static char *buffer = NULL;
+char *fileName = NULL;
 
 /* Current block size */
 static unsigned int blockSize = 0;
-
-/* Current block in file */
-static unsigned int currentBlock = 0;
 
 /* Segment size in bytes */
 static unsigned int segmentSize = RELSEG_SIZE * BLCKSZ;
@@ -74,23 +89,44 @@ static int	exitCode = 0;
 /*
  * Function Prototypes
  */
+unsigned int GetBlockSize(FILE *fp);
+
 static void DisplayOptions(unsigned int validOptions);
 static unsigned int ConsumeOptions(int numOptions, char **options);
 static int	GetOptionValue(char *optionString);
-static void FormatBlock(BlockNumber blkno);
-static unsigned int GetBlockSize();
-static unsigned int GetSpecialSectionType(Page page);
+static void FormatBlock(unsigned int blockOptions,
+		unsigned int controlOptions,
+		char *buffer,
+		BlockNumber currentBlock,
+		unsigned int blockSize,
+		bool isToast,
+		Oid toastOid,
+		unsigned int toastExternalSize,
+		char *toastValue,
+		unsigned int *toastRead);
+static unsigned int GetSpecialSectionType(char *buffer, Page page);
 static bool IsBtreeMetaPage(Page page);
 static void CreateDumpFileHeader(int numOptions, char **options);
-static int	FormatHeader(Page page, BlockNumber blkno);
-static void FormatItemBlock(Page page);
-static void FormatItem(unsigned int numBytes, unsigned int startIndex,
-		   unsigned int formatAs);
-static void FormatSpecial();
-static void FormatControl();
-static void FormatBinary(unsigned int numBytes, unsigned int startIndex);
-static void DumpBinaryBlock();
-static void DumpFileContents();
+static int	FormatHeader(char *buffer,
+		Page page,
+		BlockNumber blkno,
+		bool isToast);
+static void FormatItemBlock(char *buffer,
+		Page page,
+		bool isToast,
+		Oid toastOid,
+		unsigned int toastExternalSize,
+		char *toastValue,
+		unsigned int *toastRead);
+static void FormatItem(char *buffer,
+		unsigned int numBytes,
+		unsigned int startIndex,
+		unsigned int formatAs);
+static void FormatSpecial(char *buffer);
+static void FormatControl(char *buffer);
+static void FormatBinary(char *buffer,
+		unsigned int numBytes, unsigned int startIndex);
+static void DumpBinaryBlock(char *buffer);
 
 
 /* Send properly formed usage information to the user. */
@@ -133,6 +169,8 @@ DisplayOptions(unsigned int validOptions)
 		 "        [endblock]: block to end at\n"
 		 "      A startblock without an endblock will format the single block\n"
 		 "  -s  Force segment size to [segsize]\n"
+		 "  -t  Dump TOAST files\n"
+		 "  -v  Ouput additional information about TOAST relations\n"
 		 "  -n  Force segment number to [segnumber]\n"
 		 "  -S  Force block size to [blocksize]\n"
 		 "  -x  Force interpreted formatting of block items as index items\n"
@@ -482,6 +520,14 @@ ConsumeOptions(int numOptions, char **options)
 						SET_OPTION(blockOptions, BLOCK_IGNORE_OLD, 'o');
 						break;
 
+					case 't':
+						SET_OPTION(blockOptions, BLOCK_DECODE_TOAST, 't');
+						break;
+
+					case 'v':
+						verbose = true;
+						break;
+
 						/* Interpret items as standard index values */
 					case 'x':
 						SET_OPTION(itemOptions, ITEM_INDEX, 'x');
@@ -593,8 +639,8 @@ GetOptionValue(char *optionString)
 /* Read the page header off of block 0 to determine the block size
  * used in this file.  Can be overridden using the -S option. The
  * returned value is the block size of block 0 on disk */
-static unsigned int
-GetBlockSize()
+unsigned int
+GetBlockSize(FILE *fp)
 {
 	unsigned int pageHeaderSize = sizeof(PageHeaderData);
 	unsigned int localSize = 0;
@@ -620,7 +666,7 @@ GetBlockSize()
 /* Determine the contents of the special section on the block and
  * return this enum value */
 static unsigned int
-GetSpecialSectionType(Page page)
+GetSpecialSectionType(char *buffer, Page page)
 {
 	unsigned int rc;
 	unsigned int specialOffset;
@@ -760,13 +806,15 @@ CreateDumpFileHeader(int numOptions, char **options)
 
 /*	Dump out a formatted block header for the requested block */
 static int
-FormatHeader(Page page, BlockNumber blkno)
+FormatHeader(char *buffer, Page page, BlockNumber blkno, bool isToast)
 {
 	int			rc = 0;
 	unsigned int headerBytes;
 	PageHeader	pageHeader = (PageHeader) page;
+	char	   *indent = isToast ? "\t" : "";
 
-	printf("<Header> -----\n");
+	if (!isToast || verbose)
+		printf("%s<Header> -----\n", indent);
 
 	/* Only attempt to format the header if the entire header (minus the item
 	 * array) is available */
@@ -810,34 +858,39 @@ FormatHeader(Page page, BlockNumber blkno)
 			flagString[strlen(flagString) - 1] = '\0';
 
 		/* Interpret the content of the header */
-		printf
-			(" Block Offset: 0x%08x         Offsets: Lower    %4u (0x%04hx)\n"
-			 " Block: Size %4d  Version %4u            Upper    %4u (0x%04hx)\n"
-			 " LSN:  logid %6d recoff 0x%08x      Special  %4u (0x%04hx)\n"
-			 " Items: %4d                      Free Space: %4u\n"
-			 " Checksum: 0x%04x  Prune XID: 0x%08x  Flags: 0x%04x (%s)\n"
-			 " Length (including item array): %u\n\n",
-			 pageOffset, pageHeader->pd_lower, pageHeader->pd_lower,
-			 (int) PageGetPageSize(page), blockVersion,
-			 pageHeader->pd_upper, pageHeader->pd_upper,
-			 (uint32) (pageLSN >> 32), (uint32) pageLSN,
-			 pageHeader->pd_special, pageHeader->pd_special,
-			 maxOffset, pageHeader->pd_upper - pageHeader->pd_lower,
-			 pageHeader->pd_checksum, pageHeader->pd_prune_xid,
-			 pageHeader->pd_flags, flagString,
-			 headerBytes);
+		if (!isToast || verbose)
+		{
+			printf("%s Block Offset: 0x%08x         Offsets: Lower    %4u (0x%04hx)\n",
+					indent, pageOffset, pageHeader->pd_lower, pageHeader->pd_lower);
+			printf("%s Block: Size %4d  Version %4u            Upper    %4u (0x%04hx)\n",
+					indent, (int) PageGetPageSize(page), blockVersion,
+					pageHeader->pd_upper, pageHeader->pd_upper);
+			printf("%s LSN:  logid %6d recoff 0x%08x      Special  %4u (0x%04hx)\n",
+					indent, (uint32) (pageLSN >> 32), (uint32) pageLSN,
+					pageHeader->pd_special, pageHeader->pd_special);
+			printf("%s Items: %4d                      Free Space: %4u\n",
+					indent, maxOffset, pageHeader->pd_upper - pageHeader->pd_lower);
+			printf("%s Checksum: 0x%04x  Prune XID: 0x%08x  Flags: 0x%04x (%s)\n",
+					indent, pageHeader->pd_checksum, pageHeader->pd_prune_xid,
+					pageHeader->pd_flags, flagString);
+			printf("%s Length (including item array): %u\n\n",
+					indent, headerBytes);
+		}
 
 		/* If it's a btree meta page, print the contents of the meta block. */
 		if (IsBtreeMetaPage(page))
 		{
 			BTMetaPageData *btpMeta = BTPageGetMeta(buffer);
 
-			printf(" BTree Meta Data:  Magic (0x%08x)   Version (%u)\n"
-				   "                   Root:     Block (%u)  Level (%u)\n"
-				   "                   FastRoot: Block (%u)  Level (%u)\n\n",
-				   btpMeta->btm_magic, btpMeta->btm_version,
-				   btpMeta->btm_root, btpMeta->btm_level,
-				   btpMeta->btm_fastroot, btpMeta->btm_fastlevel);
+			if (!isToast || verbose)
+			{
+				printf("%s BTree Meta Data:  Magic (0x%08x)   Version (%u)\n",
+						indent, btpMeta->btm_magic, btpMeta->btm_version);
+				printf("%s                   Root:     Block (%u)  Level (%u)\n",
+						indent, btpMeta->btm_root, btpMeta->btm_level);
+				printf("%s                   FastRoot: Block (%u)  Level (%u)\n\n",
+					indent, btpMeta->btm_fastroot, btpMeta->btm_fastlevel);
+			}
 			headerBytes += sizeof(BTMetaPageData);
 		}
 
@@ -876,9 +929,11 @@ FormatHeader(Page page, BlockNumber blkno)
 	 * the user know about it */
 	if (rc == EOF_ENCOUNTERED)
 	{
-		printf
-			(" Error: End of block encountered within the header."
-			 " Bytes read: %4u.\n\n", bytesToFormat);
+		if (!isToast || verbose)
+		{
+			printf("%s Error: End of block encountered within the header."
+					" Bytes read: %4u.\n\n", indent, bytesToFormat);
+		}
 		exitCode = 1;
 	}
 
@@ -886,14 +941,20 @@ FormatHeader(Page page, BlockNumber blkno)
 	 * items and special section).  It's best to dump even on an error
 	 * so the user can see the raw image. */
 	if (blockOptions & BLOCK_FORMAT)
-		FormatBinary(headerBytes, 0);
+		FormatBinary(buffer, headerBytes, 0);
 
 	return (rc);
 }
 
 /*	Dump out formatted items that reside on this block */
 static void
-FormatItemBlock(Page page)
+FormatItemBlock(char *buffer,
+		Page page,
+		bool isToast,
+		Oid toastOid,
+		unsigned int toastExternalSize,
+		char *toastValue,
+		unsigned int *toastRead)
 {
 	unsigned int x;
 	unsigned int itemSize;
@@ -901,29 +962,38 @@ FormatItemBlock(Page page)
 	unsigned int itemFlags;
 	ItemId		itemId;
 	int			maxOffset = PageGetMaxOffsetNumber(page);
+	char	   *indent = isToast ? "\t" : "";
 
 	/* If it's a btree meta page, the meta block is where items would normally
 	 * be; don't print garbage. */
 	if (IsBtreeMetaPage(page))
 		return;
 
-	printf("<Data> ------ \n");
+	if (!isToast || verbose)
+		printf("%s<Data> ------ \n", indent);
 
 	/* Loop through the items on the block.  Check if the block is
 	 * empty and has a sensible item array listed before running
 	 * through each item */
 	if (maxOffset == 0)
-		printf(" Empty block - no items listed \n\n");
+	{
+		if (!isToast || verbose)
+			printf("%s Empty block - no items listed \n\n", indent);
+	}
 	else if ((maxOffset < 0) || (maxOffset > blockSize))
 	{
-		printf(" Error: Item index corrupt on block. Offset: <%d>.\n\n",
-			   maxOffset);
+		if (!isToast || verbose)
+			printf("%s Error: Item index corrupt on block. Offset: <%d>.\n\n",
+				   indent,
+				   maxOffset);
 		exitCode = 1;
 	}
 	else
 	{
-		int			formatAs;
-		char		textFlags[16];
+		int				formatAs;
+		char			textFlags[16];
+		uint32			chunkId;
+		unsigned int	chunkSize = 0;
 
 		/* First, honour requests to format items a special way, then
 		 * use the special section to determine the format style */
@@ -984,18 +1054,25 @@ FormatItemBlock(Page page)
 					break;
 			}
 
-			printf(" Item %3u -- Length: %4u  Offset: %4u (0x%04x)"
-				   "  Flags: %s\n", x, itemSize, itemOffset, itemOffset,
-				   textFlags);
+			if (!isToast || verbose)
+				printf("%s Item %3u -- Length: %4u  Offset: %4u (0x%04x)"
+					   "  Flags: %s\n",
+					   indent,
+					   x,
+					   itemSize,
+					   itemOffset,
+					   itemOffset,
+					   textFlags);
 
 			/* Make sure the item can physically fit on this block before
 			 * formatting */
 			if ((itemOffset + itemSize > blockSize) ||
 				(itemOffset + itemSize > bytesToFormat))
 			{
-				printf("  Error: Item contents extend beyond block.\n"
-					   "         BlockSize<%d> Bytes Read<%d> Item Start<%d>.\n",
-					   blockSize, bytesToFormat, itemOffset + itemSize);
+				if (!isToast || verbose)
+					printf("%s  Error: Item contents extend beyond block.\n"
+						   "%s         BlockSize<%d> Bytes Read<%d> Item Start<%d>.\n",
+						   indent, indent, blockSize, bytesToFormat, itemOffset + itemSize);
 				exitCode = 1;
 			}
 			else
@@ -1006,20 +1083,43 @@ FormatItemBlock(Page page)
 				/* If the user requests that the items be interpreted as
 				 * heap or index items... */
 				if (itemOptions & ITEM_DETAIL)
-					FormatItem(itemSize, itemOffset, formatAs);
+					FormatItem(buffer, itemSize, itemOffset, formatAs);
 
 				/* Dump the items contents in hex and ascii */
 				if (blockOptions & BLOCK_FORMAT)
-					FormatBinary(itemSize, itemOffset);
+					FormatBinary(buffer, itemSize, itemOffset);
 
 				/* Check if tuple was deleted */
 				tuple_header = (HeapTupleHeader) (&buffer[itemOffset]);
 				xmax = HeapTupleHeaderGetRawXmax(tuple_header);
 				if ((blockOptions & BLOCK_IGNORE_OLD) && (xmax != 0))
-					printf("tuple was removed by transaction #%d\n", xmax);
+				{
+					if (!isToast || verbose)
+						printf("%stuple was removed by transaction #%d\n",
+								indent,
+								xmax);
+				}
+				else if (isToast)
+				{
+					ToastChunkDecode(&buffer[itemOffset], itemSize, toastOid,
+									 &chunkId, toastValue + *toastRead,
+									 &chunkSize);
+
+					if (!isToast || verbose)
+						printf("%s  Read TOAST chunk. TOAST Oid: %d, chunk id: %d, "
+							   "chunk data size: %d\n",
+							   indent, toastOid, chunkId, chunkSize);
+
+					*toastRead += chunkSize;
+
+					if (*toastRead >= toastExternalSize)
+						break;
+				}
 				else if ((blockOptions & BLOCK_DECODE) && (itemFlags == LP_NORMAL))
+				{
 					/* Decode tuple data */
 					FormatDecode(&buffer[itemOffset], itemSize);
+				}
 
 				if (x == maxOffset)
 					printf("\n");
@@ -1031,7 +1131,7 @@ FormatItemBlock(Page page)
 /* Interpret the contents of the item based on whether it has a special
  * section and/or the user has hinted */
 static void
-FormatItem(unsigned int numBytes, unsigned int startIndex,
+FormatItem(char *buffer, unsigned int numBytes, unsigned int startIndex,
 		   unsigned int formatAs)
 {
 	static const char *const spgist_tupstates[4] = {
@@ -1108,7 +1208,8 @@ FormatItem(unsigned int numBytes, unsigned int startIndex,
 				/* Dump the prefix contents in hex and ascii */
 				if ((blockOptions & BLOCK_FORMAT) &&
 					SGITHDRSZ + itup->prefixSize <= numBytes)
-					FormatBinary(SGITHDRSZ + itup->prefixSize, startIndex);
+					FormatBinary(buffer,
+							SGITHDRSZ + itup->prefixSize, startIndex);
 
 				/* Try to print the nodes, but only while pointer is sane */
 				SGITITERATE(itup, i, node)
@@ -1127,7 +1228,8 @@ FormatItem(unsigned int numBytes, unsigned int startIndex,
 					/* Dump the node's contents in hex and ascii */
 					if ((blockOptions & BLOCK_FORMAT) &&
 						off + IndexTupleSize(node) <= numBytes)
-						FormatBinary(IndexTupleSize(node), startIndex + off);
+						FormatBinary(buffer,
+								IndexTupleSize(node), startIndex + off);
 					if (IndexTupleSize(node) != MAXALIGN(IndexTupleSize(node)))
 						break;
 				}
@@ -1309,7 +1411,7 @@ FormatItem(unsigned int numBytes, unsigned int startIndex,
 /* On blocks that have special sections, print the contents
  * according to previously determined special section type */
 static void
-FormatSpecial()
+FormatSpecial(char *buffer)
 {
 	PageHeader	pageHeader = (PageHeader) buffer;
 	char		flagString[100] = "\0";
@@ -1494,50 +1596,68 @@ FormatSpecial()
 			exitCode = 1;
 		}
 		else
-			FormatBinary(specialSize, specialOffset);
+			FormatBinary(buffer, specialSize, specialOffset);
 	}
 }
 
 /*	For each block, dump out formatted header and content information */
 static void
-FormatBlock(BlockNumber blkno)
+FormatBlock(unsigned int blockOptions,
+		unsigned int controlOptions,
+		char *buffer,
+		BlockNumber currentBlock,
+		unsigned int blockSize,
+		bool isToast,
+		Oid toastOid,
+		unsigned int toastExternalSize,
+		char *toastValue,
+		unsigned int *toastRead)
 {
 	Page		page = (Page) buffer;
+	char	   *indent = isToast ? "\t" : "";
 
 	pageOffset = blockSize * currentBlock;
-	specialType = GetSpecialSectionType(page);
+	specialType = GetSpecialSectionType(buffer, page);
 
-	printf("\nBlock %4u **%s***************************************\n",
-		   currentBlock,
-		   (bytesToFormat ==
-			blockSize) ? "***************" : " PARTIAL BLOCK ");
+	if (!isToast || verbose)
+		printf("\n%sBlock %4u **%s***************************************\n",
+			   indent,
+			   currentBlock,
+			   (bytesToFormat ==
+				blockSize) ? "***************" : " PARTIAL BLOCK ");
 
 	/* Either dump out the entire block in hex+acsii fashion or
 	 * interpret the data based on block structure */
 	if (blockOptions & BLOCK_NO_INTR)
-		FormatBinary(bytesToFormat, 0);
+		FormatBinary(buffer, bytesToFormat, 0);
 	else
 	{
 		int			rc;
 
 		/* Every block contains a header, items and possibly a special
 		 * section.  Beware of partial block reads though */
-		rc = FormatHeader(page, blkno);
+		rc = FormatHeader(buffer, page, currentBlock, isToast);
 
 		/* If we didn't encounter a partial read in the header, carry on... */
 		if (rc != EOF_ENCOUNTERED)
 		{
-			FormatItemBlock(page);
+			FormatItemBlock(buffer,
+					page,
+					isToast,
+					toastOid,
+					toastExternalSize,
+					toastValue,
+					toastRead);
 
 			if (specialType != SPEC_SECT_NONE)
-				FormatSpecial();
+				FormatSpecial(buffer);
 		}
 	}
 }
 
 /*	Dump out the content of the PG control file */
 static void
-FormatControl()
+FormatControl(char *buffer)
 {
 	unsigned int localPgVersion = 0;
 	unsigned int controlFileSize = 0;
@@ -1679,14 +1799,14 @@ FormatControl()
 	{
 		printf("<pg_control Formatted Dump> *****************"
 			   "**********************\n\n");
-		FormatBinary(bytesToFormat, 0);
+		FormatBinary(buffer, bytesToFormat, 0);
 	}
 }
 
 /* Dump out the contents of the block in hex and ascii.
  * BYTES_PER_LINE bytes are formatted in each line. */
 static void
-FormatBinary(unsigned int numBytes, unsigned int startIndex)
+FormatBinary(char *buffer, unsigned int numBytes, unsigned int startIndex)
 {
 	unsigned int index = 0;
 	unsigned int stopIndex = 0;
@@ -1735,7 +1855,7 @@ FormatBinary(unsigned int numBytes, unsigned int startIndex)
 
 /* Dump the binary image of the block */
 static void
-DumpBinaryBlock()
+DumpBinaryBlock(char *buffer)
 {
 	unsigned int x;
 
@@ -1744,24 +1864,45 @@ DumpBinaryBlock()
 }
 
 /* Control the dumping of the blocks within the file */
-static void
-DumpFileContents()
+int
+DumpFileContents(unsigned int blockOptions,
+		unsigned int controlOptions,
+		FILE *fp,
+		unsigned int blockSize,
+		int blockStart,
+		int blockEnd,
+		bool isToast,
+		Oid toastOid,
+		unsigned int toastExternalSize,
+		char *toastValue)
 {
-	unsigned int initialRead = 1;
-	unsigned int contentsToDump = 1;
+	unsigned int	initialRead = 1;
+	unsigned int	contentsToDump = 1;
+	unsigned int	toastDataRead = 0;
+	BlockNumber		currentBlock = 0;
+	int				result = 0;
+	/* On a positive block size, allocate a local buffer to store
+	 * the subsequent blocks */
+	char		   *block = (char *)malloc(blockSize);
+	if (!block)
+	{
+		printf("\nError: Unable to create buffer of size <%d>.\n",
+			   blockSize);
+		result = 1;
+	}
 
 	/* If the user requested a block range, seek to the correct position
 	 * within the file for the start block. */
-	if (blockOptions & BLOCK_RANGE)
+	if (result == 0 && blockOptions & BLOCK_RANGE)
 	{
-		unsigned int position = blockSize * blockStart;
+		unsigned int	position = blockSize * blockStart;
 
 		if (fseek(fp, position, SEEK_SET) != 0)
 		{
 			printf("Error: Seek error encountered before requested "
 				   "start block <%d>.\n", blockStart);
 			contentsToDump = 0;
-			exitCode = 1;
+			result = 1;
 		}
 		else
 			currentBlock = blockStart;
@@ -1769,9 +1910,9 @@ DumpFileContents()
 
 	/* Iterate through the blocks in the file until you reach the end or
 	 * the requested range end */
-	while (contentsToDump)
+	while (contentsToDump && result == 0)
 	{
-		bytesToFormat = fread(buffer, 1, blockSize, fp);
+		bytesToFormat = fread(block, 1, blockSize, fp);
 
 		if (bytesToFormat == 0)
 		{
@@ -1788,16 +1929,27 @@ DumpFileContents()
 		else
 		{
 			if (blockOptions & BLOCK_BINARY)
-				DumpBinaryBlock();
+				DumpBinaryBlock(block);
 			else
 			{
 				if (controlOptions & CONTROL_DUMP)
 				{
-					FormatControl();
+					FormatControl(block);
 					contentsToDump = false;
 				}
 				else
-					FormatBlock(currentBlock);
+				{
+					FormatBlock(blockOptions,
+							controlOptions,
+							block,
+							currentBlock,
+							blockSize,
+							isToast,
+							toastOid,
+							toastExternalSize,
+							toastValue,
+							&toastDataRead);
+				}
 			}
 		}
 
@@ -1815,7 +1967,15 @@ DumpFileContents()
 			currentBlock++;
 
 		initialRead = 0;
+
+		/* If TOAST data is read */
+		if (isToast && toastDataRead >= toastExternalSize)
+			break;
 	}
+
+	free(block);
+
+	return result;
 }
 
 /* Consume the options and iterate through the given file, formatting as
@@ -1846,30 +2006,23 @@ main(int argv, char **argc)
 				blockSize = sizeof(ControlFileData);
 		}
 		else if (!(blockOptions & BLOCK_FORCED))
-			blockSize = GetBlockSize();
+			blockSize = GetBlockSize(fp);
 
-		/* On a positive block size, allocate a local buffer to store
-		 * the subsequent blocks */
-		if (blockSize > 0)
-		{
-			buffer = (char *) malloc(blockSize);
-			if (buffer)
-				DumpFileContents();
-			else
-			{
-				printf("\nError: Unable to create buffer of size <%d>.\n",
-					   blockSize);
-				exitCode = 1;
-			}
-		}
+		exitCode = DumpFileContents(blockOptions,
+				controlOptions,
+				fp,
+				blockSize,
+				blockStart,
+				blockEnd,
+				false /* is toast realtion */,
+				0,    /* no toast Oid */
+				0,    /* no toast external size */
+				NULL  /* no out toast value */
+				);
 	}
 
-	/* Close out the file and get rid of the allocated block buffer */
 	if (fp)
 		fclose(fp);
-
-	if (buffer)
-		free(buffer);
 
 	exit(exitCode);
 }
