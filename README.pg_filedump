@@ -40,19 +40,18 @@ PostgreSQL source tree or complete install tree (with include files)
 of the appropriate PostgreSQL major version.
 
 There are two makefiles included in this package.  Makefile is a standalone
-makefile for pg_filedump.  Alter its PGSQL_INCLUDE_DIR variable to point to
-the PostgreSQL include files.  Makefile.contrib can be used if this package
+makefile for pg_filedump.  Makefile.contrib can be used if this package
 was untarred in the contrib directory of a PostgreSQL build tree.
 
   make
-  make install (if using Makefile.contrib)
+  make install
 
 It is also possible to use Makefile.contrib without being in the contrib
 directory:
 
   make -f Makefile.contrib USE_PGXS=1
 
-This method requires that the pg_config program be in your PATH, but should
+Both methods require that the pg_config program be in your PATH, but should
 not require any manual adjustments of the Makefile.
 
 
