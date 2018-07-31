@@ -1733,7 +1733,9 @@ FormatControl(char *buffer)
 			   "                        State: %s\n"
 			   "                Last Mod Time: %s"
 			   "       Last Checkpoint Record: Log File (%u) Offset (0x%08x)\n"
+#if PG_VERSION_NUM < 110000
 			   "   Previous Checkpoint Record: Log File (%u) Offset (0x%08x)\n"
+#endif
 			   "  Last Checkpoint Record Redo: Log File (%u) Offset (0x%08x)\n"
 			   "             |-    TimeLineID: %u\n"
 			   "             |-      Next XID: %u/%u\n"
@@ -1761,7 +1763,9 @@ FormatControl(char *buffer)
 			   dbState,
 			   ctime(&(cd_time)),
 			   (uint32) (controlData->checkPoint >> 32), (uint32) controlData->checkPoint,
+#if PG_VERSION_NUM < 110000
 			   (uint32) (controlData->prevCheckPoint >> 32), (uint32) controlData->prevCheckPoint,
+#endif
 			   (uint32) (checkPoint->redo >> 32), (uint32) checkPoint->redo,
 			   checkPoint->ThisTimeLineID,
 			   checkPoint->nextXidEpoch, checkPoint->nextXid,
