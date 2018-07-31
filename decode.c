@@ -161,13 +161,13 @@ static ParseCallbackTableItem callback_table[] =
 
 	/* internally all string types are stored the same way */
 	{
-		"charN", &decode_string
+		"charn", &decode_string
 	},
 	{
 		"varchar", &decode_string
 	},
 	{
-		"varcharN", &decode_string
+		"varcharn", &decode_string
 	},
 	{
 		"text", &decode_string
