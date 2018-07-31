@@ -408,7 +408,8 @@ ParseAttributeTypesString(const char *str)
 
 	strcpy(attrtypes, str);
 	for (i = 0; i < len; i++)
-		attrtypes[i] = tolower(attrtypes[i]);
+	    if (attrtypes[i] != 'N')
+		    attrtypes[i] = tolower(attrtypes[i]);
 
 	curr_type = attrtypes;
 	while (curr_type)
