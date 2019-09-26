@@ -3,7 +3,7 @@
  *				   formatting heap (data), index and control files.
  *
  * Copyright (c) 2002-2010 Red Hat, Inc.
- * Copyright (c) 2011-2018, PostgreSQL Global Development Group
+ * Copyright (c) 2011-2019, PostgreSQL Global Development Group
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -657,6 +657,13 @@ GetBlockSize(FILE *fp)
 		printf("Error: Unable to read full page header from block 0.\n"
 			   "  ===> Read %u bytes\n", bytesRead);
 		exitCode = 1;
+	}
+
+	if (localSize == 0)
+	{
+		printf("Notice: Block size determined from reading block 0 is zero, using default %d instead.\n", BLCKSZ);
+		printf("Hint: Use -S <size> to specify the size manually.\n");
+		localSize = BLCKSZ;
 	}
 
 	return (localSize);
