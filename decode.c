@@ -898,7 +898,11 @@ decode_string(const char *buffer, unsigned int buff_size, unsigned int *out_size
 		}
 
 		decompress_ret = pglz_decompress(VARDATA_4B_C(buffer), len - 2 * sizeof(uint32),
-										 decompress_tmp_buff, decompressed_len);
+										 decompress_tmp_buff, decompressed_len
+#if PG_VERSION_NUM >= 120000
+										 , true
+#endif
+										 );
 		if ((decompress_ret != decompressed_len) || (decompress_ret < 0))
 		{
 			printf("WARNING: Unable to decompress a string. Data is corrupted.\n");
@@ -979,7 +983,11 @@ static int DumpCompressedString(const char *data, int32 decompressed_size)
 
 	decompress_ret = pglz_decompress(TOAST_COMPRESS_RAWDATA(data),
 			decompressed_size - TOAST_COMPRESS_HEADER_SIZE,
-			decompress_tmp_buff, TOAST_COMPRESS_RAWSIZE(data));
+			decompress_tmp_buff, TOAST_COMPRESS_RAWSIZE(data)
+#if PG_VERSION_NUM >= 120000
+			, true
+#endif
+			);
 	if ((decompress_ret != TOAST_COMPRESS_RAWSIZE(data)) ||
 			(decompress_ret < 0))
 	{

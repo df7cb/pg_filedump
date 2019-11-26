@@ -4,7 +4,7 @@
 FD_VERSION=11.0
 
 PROGRAM = pg_filedump
-OBJS = pg_filedump.o decode.o stringinfo.o pg_lzcompress.o
+OBJS = pg_filedump.o decode.o stringinfo.o
 
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
@@ -14,7 +14,7 @@ include $(PGXS)
 LIBS = $(libpq_pgport)
 
 DISTFILES= README.pg_filedump Makefile Makefile.contrib \
-	pg_filedump.h pg_filedump.c decode.h decode.c stringinfo.c pg_lzcompress.c
+	pg_filedump.h pg_filedump.c decode.h decode.c stringinfo.c
 
 dist:
 	rm -rf pg_filedump-${FD_VERSION} pg_filedump-${FD_VERSION}.tar.gz
