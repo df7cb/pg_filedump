@@ -1,0 +1,25 @@
+# run the testsuite on travis-ci.com
+---
+# versions to run on
+env:
+  # 9.4 doesn't have a compatible pg_lzcompress.h yet
+  - PG_SUPPORTED_VERSIONS=9.5
+  - PG_SUPPORTED_VERSIONS=9.6
+  - PG_SUPPORTED_VERSIONS=10
+  - PG_SUPPORTED_VERSIONS=11
+  - PG_SUPPORTED_VERSIONS=12
+
+language: C
+dist: xenial
+sudo: required
+
+before_install:
+  # extra apt.pg.o.sh options added in version 204, travis currently has 199 (2019-11-27)
+  - sudo apt-get -qq update
+  - sudo apt-get -y install postgresql-common
+
+install:
+  - sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -p -v $PG_SUPPORTED_VERSIONS -i
+
+script:
+  - make
