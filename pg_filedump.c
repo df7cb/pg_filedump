@@ -1314,9 +1314,11 @@ FormatItem(char *buffer, unsigned int numBytes, unsigned int startIndex,
 				   HeapTupleHeaderGetRawXmax(htup),
 				   HeapTupleHeaderGetRawCommandId(htup));
 
+#if PG_VERSION_NUM < 120000
 			if (infoMask & HEAP_HASOID)
 				printf("  OID: %u",
 					   HeapTupleHeaderGetOid(htup));
+#endif
 
 			printf("\n"
 				   "  Block Id: %u  linp Index: %u   Attributes: %d   Size: %d\n",
@@ -1334,8 +1336,10 @@ FormatItem(char *buffer, unsigned int numBytes, unsigned int startIndex,
 				strcat(flagString, "HASVARWIDTH|");
 			if (infoMask & HEAP_HASEXTERNAL)
 				strcat(flagString, "HASEXTERNAL|");
+#if PG_VERSION_NUM < 120000
 			if (infoMask & HEAP_HASOID)
 				strcat(flagString, "HASOID|");
+#endif
 			if (infoMask & HEAP_XMAX_KEYSHR_LOCK)
 				strcat(flagString, "XMAX_KEYSHR_LOCK|");
 			if (infoMask & HEAP_COMBOCID)
@@ -1380,8 +1384,10 @@ FormatItem(char *buffer, unsigned int numBytes, unsigned int startIndex,
 			else
 				bitmapLength = 0;
 
+#if PG_VERSION_NUM < 120000
 			if (infoMask & HEAP_HASOID)
 				oidLength += sizeof(Oid);
+#endif
 
 			computedLength =
 				MAXALIGN(localBitOffset + bitmapLength + oidLength);
@@ -1774,7 +1780,12 @@ FormatControl(char *buffer)
 #endif
 			   (uint32) (checkPoint->redo >> 32), (uint32) checkPoint->redo,
 			   checkPoint->ThisTimeLineID,
+#if PG_VERSION_NUM < 120000
 			   checkPoint->nextXidEpoch, checkPoint->nextXid,
+#else
+			   EpochFromFullTransactionId(checkPoint->nextFullXid),
+			   XidFromFullTransactionId(checkPoint->nextFullXid),
+#endif
 			   checkPoint->nextOid,
 			   checkPoint->nextMulti, checkPoint->nextMultiOffset,
 			   ctime(&cp_time),
