@@ -1,2 +1,5 @@
+/*.bc
 /*.o
 /pg_filedump
+/regression.*
+/results/
