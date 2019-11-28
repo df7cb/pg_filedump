@@ -137,7 +137,7 @@ DisplayOptions(unsigned int validOptions)
 		printf
 			("\nVersion %s (for %s)"
 			 "\nCopyright (c) 2002-2010 Red Hat, Inc."
-		  "\nCopyright (c) 2011-2018, PostgreSQL Global Development Group\n",
+		  "\nCopyright (c) 2011-2019, PostgreSQL Global Development Group\n",
 			 FD_VERSION, FD_PG_VERSION);
 
 	printf
