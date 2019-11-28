@@ -794,7 +794,8 @@ CreateDumpFileHeader(int numOptions, char **options)
 		if ((strlen(optionBuffer) + strlen(options[x])) > 50)
 			break;
 		strcat(optionBuffer, options[x]);
-		strcat(optionBuffer, " ");
+		if (x < numOptions - 2)
+			strcat(optionBuffer, " ");
 	}
 
 	printf
@@ -973,7 +974,7 @@ FormatItemBlock(char *buffer,
 		return;
 
 	if (!isToast || verbose)
-		printf("%s<Data> ------ \n", indent);
+		printf("%s<Data> -----\n", indent);
 
 	/* Loop through the items on the block.  Check if the block is
 	 * empty and has a sensible item array listed before running
