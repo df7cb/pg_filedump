@@ -786,7 +786,6 @@ CreateDumpFileHeader(int numOptions, char **options)
 {
 	unsigned int x;
 	char		optionBuffer[52] = "\0";
-	time_t		rightNow = time(NULL);
 
 	/* Iterate through the options and cache them.
 	 * The maximum we can display is 50 option characters + spaces. */
@@ -800,14 +799,12 @@ CreateDumpFileHeader(int numOptions, char **options)
 
 	printf
 		("\n*******************************************************************\n"
-		 "* PostgreSQL File/Block Formatted Dump Utility - Version %s\n"
+		 "* PostgreSQL File/Block Formatted Dump Utility\n"
 		 "*\n"
 		 "* File: %s\n"
-		 "* Options used: %s\n*\n"
-		 "* Dump created on: %s"
+		 "* Options used: %s\n"
 		 "*******************************************************************\n",
-		 FD_VERSION, fileName, (strlen(optionBuffer)) ? optionBuffer : "None",
-		 ctime(&rightNow));
+		 fileName, (strlen(optionBuffer)) ? optionBuffer : "None");
 }
 
 /*	Dump out a formatted block header for the requested block */
