@@ -1780,9 +1780,12 @@ FormatControl(char *buffer)
 			   checkPoint->ThisTimeLineID,
 #if PG_VERSION_NUM < 120000
 			   checkPoint->nextXidEpoch, checkPoint->nextXid,
-#else
+#elif PG_VERSION_NUM < 140000
 			   EpochFromFullTransactionId(checkPoint->nextFullXid),
 			   XidFromFullTransactionId(checkPoint->nextFullXid),
+#else
+			   EpochFromFullTransactionId(checkPoint->nextXid),
+			   XidFromFullTransactionId(checkPoint->nextXid),
 #endif
 			   checkPoint->nextOid,
 			   checkPoint->nextMulti, checkPoint->nextMultiOffset,
