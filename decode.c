@@ -4,7 +4,12 @@
 #include <lib/stringinfo.h>
 #include <access/htup_details.h>
 #include <access/tupmacs.h>
+#if PG_VERSION_NUM >= 130000
+#include <access/detoast.h>
+#include <access/heaptoast.h>
+#else
 #include <access/tuptoaster.h>
+#endif
 #include <datatype/timestamp.h>
 #include <common/pg_lzcompress.h>
 #include <string.h>
