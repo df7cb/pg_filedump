@@ -3,3 +3,4 @@
 /pg_filedump
 /regression.*
 /results/
+testfile*

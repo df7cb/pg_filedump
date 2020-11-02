@@ -1,11 +1,10 @@
--- 64 bit output in *.out, 32 bit output in *_3.out
-\! pg_filedump testfile | sed -e 's/recoff 0x......../recoff 0x......../'
+\! pg_filedump -D int,text testfile | sed -e 's/recoff 0x......../recoff 0x......../'
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
 *
 * File: testfile
-* Options used: None
+* Options used: -D int,text
 *******************************************************************
 
 Block    0 ********************************************************
@@ -19,8 +18,11 @@ Block    0 ********************************************************
 
 <Data> -----
  Item   1 -- Length:   32  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: 1	one
  Item   2 -- Length:   32  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: 2	two
  Item   3 -- Length:   34  Offset: 8088 (0x1f98)  Flags: NORMAL
+COPY: 3	three
 
 
 *** End of File Encountered. Last Block Read: 0 ***

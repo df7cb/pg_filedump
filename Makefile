@@ -5,7 +5,10 @@ FD_VERSION=12.0
 
 PROGRAM = pg_filedump
 OBJS = pg_filedump.o decode.o stringinfo.o
-REGRESS = pg_filedump
+REGRESS = testfile \
+		  pg_filedump \
+		  pg_filedump_-Dinttext
+EXTRA_CLEAN = testfile testfile.sh
 
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)

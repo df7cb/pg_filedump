@@ -1,0 +1,13 @@
+CREATE TABLE test (i int, t text);
+INSERT INTO test VALUES (1, 'one');
+INSERT INTO test VALUES (2, 'two');
+INSERT INTO test VALUES (3, 'three');
+VACUUM test;
+CHECKPOINT;
+SHOW data_directory \gset
+SELECT oid AS datoid FROM pg_database WHERE datname = current_database() \gset
+SELECT relfilenode FROM pg_class WHERE relname = 'test' \gset
+\! rm -f testfile testfile.sh
+\t
+SELECT format('ln -s %s/base/%s/%s testfile', :'data_directory', :'datoid', :'relfilenode') \g testfile.sh
+\! sh testfile.sh
