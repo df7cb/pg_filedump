@@ -522,7 +522,7 @@ decode_bigint(const char *buffer, unsigned int buff_size, unsigned int *out_size
 	if (buff_size < sizeof(int64))
 		return -2;
 
-	CopyAppendFmt("%ld", *(int64 *) buffer);
+	CopyAppendFmt(INT64_FORMAT, *(int64 *) buffer);
 	*out_size = sizeof(int64) + delta;
 	return 0;
 }
@@ -549,7 +549,7 @@ decode_time(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 	timestamp_sec = timestamp / 1000000;
 	*out_size = sizeof(int64) + delta;
 
-	CopyAppendFmt("%02ld:%02ld:%02ld.%06ld",
+	CopyAppendFmt("%02" INT64_MODIFIER "d:%02" INT64_MODIFIER "d:%02" INT64_MODIFIER "d.%06" INT64_MODIFIER "d",
 				  timestamp_sec / 60 / 60, (timestamp_sec / 60) % 60, timestamp_sec % 60,
 				  timestamp % 1000000);
 
@@ -582,7 +582,7 @@ decode_timetz(const char *buffer, unsigned int buff_size, unsigned int *out_size
 	tz_min = -(tz_sec / 60);
 	*out_size = sizeof(int64) + sizeof(int32) + delta;
 
-	CopyAppendFmt("%02ld:%02ld:%02ld.%06ld%c%02d:%02d",
+	CopyAppendFmt("%02" INT64_MODIFIER "d:%02" INT64_MODIFIER "d:%02" INT64_MODIFIER "d.%06" INT64_MODIFIER "d%c%02d:%02d",
 				  timestamp_sec / 60 / 60, (timestamp_sec / 60) % 60, timestamp_sec % 60,
 				  timestamp % 1000000, (tz_min > 0 ? '+' : '-'), abs(tz_min / 60), abs(tz_min % 60));
 
@@ -660,7 +660,7 @@ decode_timestamp(const char *buffer, unsigned int buff_size, unsigned int *out_s
 	j2date(jd, &year, &month, &day);
 	timestamp_sec = timestamp / 1000000;
 
-	CopyAppendFmt("%04d-%02d-%02d %02ld:%02ld:%02ld.%06ld%s",
+	CopyAppendFmt("%04d-%02d-%02d %02" INT64_MODIFIER "d:%02" INT64_MODIFIER "d:%02" INT64_MODIFIER "d.%06" INT64_MODIFIER "d%s",
 				  (year <= 0) ? -year + 1 : year, month, day,
 				  timestamp_sec / 60 / 60, (timestamp_sec / 60) % 60, timestamp_sec % 60,
 				  timestamp % 1000000,
