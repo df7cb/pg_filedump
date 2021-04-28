@@ -120,5 +120,9 @@ The following options are valid for control files:
   -f  Display formatted content dump along with interpretation
   -S  Force block size to [blocksize]
 
+Additional functions:
+	-m  Interpret file as pg_filenode.map file and print contents
+      (all other options will be ignored)
+
 In most cases it's recommended to use the -i and -f options to get
 the most useful dump output.

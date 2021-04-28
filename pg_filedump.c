@@ -83,8 +83,29 @@ static unsigned int bytesToFormat = 0;
 /* Block version number */
 static unsigned int blockVersion = 0;
 
+/* Flag to indicate pg_filenode.map file */
+static bool isRelMapFile = false;
+
 /* Program exit code */
 static int	exitCode = 0;
+
+/* Relmapper structs */
+typedef struct RelMapping
+{
+  Oid     mapoid;     /* OID of a catalog */
+  Oid     mapfilenode;  /* its filenode number */
+} RelMapping;
+
+/* crc and pad are ignored here, even though they are
+ * present in the backend code.  We assume that anyone
+ * seeking to inspect the contents of pg_filenode.map
+ * probably have a corrupted or non-functional cluster */
+typedef struct RelMapFile
+{
+  int32   magic;      /* always RELMAPPER_FILEMAGIC */
+  int32   num_mappings; /* number of valid RelMapping entries */
+  RelMapping  mappings[FLEXIBLE_ARRAY_MEMBER];
+} RelMapFile;
 
 /*
  * Function Prototypes
@@ -127,6 +148,7 @@ static void FormatControl(char *buffer);
 static void FormatBinary(char *buffer,
 		unsigned int numBytes, unsigned int startIndex);
 static void DumpBinaryBlock(char *buffer);
+static int PrintRelMappings(void);
 
 
 /* Send properly formed usage information to the user. */
@@ -179,6 +201,9 @@ DisplayOptions(unsigned int validOptions)
 		 "  -c  Interpret the file listed as a control file\n"
 		 "  -f  Display formatted content dump along with interpretation\n"
 		 "  -S  Force block size to [blocksize]\n"
+		 "Additional functions:\n"
+		 "  -m  Interpret file as pg_filenode.map file and print contents (all\n"
+		 "      other options will be ignored)\n" 
 		 "\nReport bugs to <pgsql-bugs@postgresql.org>\n");
 }
 
@@ -513,6 +538,11 @@ ConsumeOptions(int numOptions, char **options)
 						/* Verify block checksums */
 					case 'k':
 						SET_OPTION(blockOptions, BLOCK_CHECKSUMS, 'k');
+						break;
+
+						/* Treat file as pg_filenode.map file */
+					case 'm':
+						isRelMapFile = true;
 						break;
 
 						/* Display old values. Ignore Xmax */
@@ -2000,6 +2030,69 @@ DumpFileContents(unsigned int blockOptions,
 	return result;
 }
 
+int
+PrintRelMappings(void)
+{
+	// For storing ingested data
+	char charbuf[RELMAPPER_FILESIZE];
+	RelMapFile *map;
+	RelMapping *mappings;
+	RelMapping m;
+	int bytesRead;
+
+	// For confirming Magic Number correctness
+	char m1[RELMAPPER_MAGICSIZE];
+	char m2[RELMAPPER_MAGICSIZE];
+	int magic_ref = RELMAPPER_FILEMAGIC;
+	int magic_val;
+	int num_loops;
+
+	// Read in the file
+	rewind(fp); // Make sure to start from the beginning
+	bytesRead = fread(charbuf,1,RELMAPPER_FILESIZE,fp);
+	if ( bytesRead != RELMAPPER_FILESIZE ) {
+		printf("Read %d bytes, expected %d\n", bytesRead, RELMAPPER_FILESIZE);
+		return 0;
+	}
+
+	// Convert to RelMapFile type for usability
+	map = (RelMapFile *) charbuf;
+
+
+	// Check and print Magic Number correctness
+	printf("Magic Number: 0x%x",map->magic);
+	magic_val = map->magic;
+
+	memcpy(m1,&magic_ref,RELMAPPER_MAGICSIZE);
+	memcpy(m2,&magic_val,RELMAPPER_MAGICSIZE);
+	if ( memcmp(m1,m2,RELMAPPER_MAGICSIZE) == 0 ) {
+		printf(" (CORRECT)\n");
+	} else {
+		printf(" (INCORRECT)\n");
+	}
+
+	// Print Mappings
+	printf("Num Mappings: %d\n",map->num_mappings);
+	printf("Detailed Mappings list:\n");
+	mappings = map->mappings;
+
+	// Limit number of mappings as per MAX_MAPPINGS
+	num_loops = map->num_mappings;
+	if ( map->num_mappings > MAX_MAPPINGS ) {
+		num_loops = MAX_MAPPINGS;
+		printf("  NOTE: listing has been limited to the first %d mappings\n", MAX_MAPPINGS);
+		printf("        (perhaps your file is not a valid pg_filenode.map file?)\n");
+	}
+
+	for (int i=0; i < num_loops; i++) {
+		m = mappings[i];
+		printf("OID: %u\tFilenode: %u\n",
+			m.mapoid,
+			m.mapfilenode);
+	}
+	return 1;
+}
+
 /* Consume the options and iterate through the given file, formatting as
  * requested. */
 int
@@ -2014,6 +2107,11 @@ main(int argv, char **argc)
 	 * where encountered */
 	if (validOptions != OPT_RC_VALID)
 		DisplayOptions(validOptions);
+	else if (isRelMapFile)
+	{
+		CreateDumpFileHeader(argv, argc);
+		exitCode = PrintRelMappings();
+	}
 	else
 	{
 		/* Don't dump the header if we're dumping binary pages */
