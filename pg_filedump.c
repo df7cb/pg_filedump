@@ -90,24 +90,25 @@ static unsigned int isMapperFile = 0;
 static int	exitCode = 0;
 
 /* Relmapper structs */
-/* Maybe ask community to put these into utils/relmapper.h? */
+/* Maybe ask community to put this into utils/relmapper.h? */
+#define RELMAPPER_FILEMAGIC   0x592717
 char magic_buffer[8];
 char relmap_file[512];
-#define RELMAPPER_FILEMAGIC   0x592717
-#define MAX_MAPPINGS      62  /* 62 * 8 + 16 = 512 */
 typedef struct RelMapping
 {
   Oid     mapoid;     /* OID of a catalog */
   Oid     mapfilenode;  /* its filenode number */
 } RelMapping;
 
+/* crc and pad are ignored here, even though they are
+ * present in the backend code.  We assume that anyone
+ * seeking to inspect the contents of pg_filenode.map
+ * probably have a corrupted or non-functional cluster */
 typedef struct RelMapFile
 {
   int32   magic;      /* always RELMAPPER_FILEMAGIC */
   int32   num_mappings; /* number of valid RelMapping entries */
-  RelMapping  mappings[MAX_MAPPINGS];
-  pg_crc32c crc;      /* CRC of all above */
-  int32   pad;      /* to make the struct size be 512 exactly */
+  RelMapping  mappings[FLEXIBLE_ARRAY_MEMBER];
 } RelMapFile;
 
 /*
@@ -153,7 +154,6 @@ static void FormatBinary(char *buffer,
 static void DumpBinaryBlock(char *buffer);
 static int CheckForRelmap(FILE *fp);
 static int PrintMappings(RelMapFile *map);
-static char* GetRelnameFromOid(Oid reloid);
 
 
 /* Send properly formed usage information to the user. */
@@ -2032,7 +2032,7 @@ DumpFileContents(unsigned int blockOptions,
 int
 CheckForRelmap(FILE *fp)
 {
-  // Get the first 4 bytes for comparison
+  // Get the first 8 bytes for comparison
   fgets(magic_buffer,8,fp);
   // Put things back where we found them
   rewind(fp);
@@ -2045,60 +2045,23 @@ CheckForRelmap(FILE *fp)
   return 0;
 }
 
-char*
-GetRelnameFromOid(Oid reloid)
-{
-        char *relname;
-	switch (reloid) {
-		case 1259:
-			relname = "pg_class";
-			break;
-		case 1249:
-			relname = "pg_attribute";
-			break;
-		case 1255:
-			relname = "pg_proc";
-			break;
-		case 1247:
-			relname = "pg_type";
-			break;
-		case 2836:
-			relname = "pg_toast_1255";
-			break;
-		case 2837:
-			relname = "pg_toast_1255_index";
-			break;
-		case 4171:
-			relname = "pg_toast_1247";
-			break;
-		default:
-			relname = "unknown";
-	}
-	return relname;
-}
-
 int
 PrintMappings(RelMapFile *map)
 {
 	RelMapping *mappings;
 	RelMapping m;
-	char *relname;
 
 	// Print Metadata
 	printf("Magic Number: %x\n",map->magic);
 	printf("Num Mappings: %d\n",map->num_mappings);
-	printf("Checksum: %u\n",map->crc);
-	printf("Number of pad bytes: %u\n", sizeof(map->pad));
 
 	// Print Mappings
 	printf("Detailed Mappings list:\n");
 	mappings = map->mappings;
-	for (int i=0; i < MAX_MAPPINGS / 8; i++) {
+	for (int i=0; i < map->num_mappings; i++) {
 		m = mappings[i];
-                relname = GetRelnameFromOid(m.mapoid);
-		printf("OID: %d\n  Table Name: %s\n  Filenode: %d\n",
+		printf("OID: %u\tFilenode: %u\n",
 			m.mapoid,
-			relname,
 			m.mapfilenode);
 	}
 	return 1;
