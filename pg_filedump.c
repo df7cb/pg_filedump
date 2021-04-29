@@ -2033,13 +2033,13 @@ int
 CheckForRelmap(FILE *fp)
 {
   // Get the first 8 bytes for comparison
-  fgets(magic_buffer,8,fp);
+  fread(magic_buffer,1,8,fp);
   // Put things back where we found them
   rewind(fp);
 
   // If it's a relmapper file, then ingest the whole thing
   if ( (int) magic_buffer & RELMAPPER_FILEMAGIC ) {
-    fgets(relmap_file,512,fp);
+    fread(relmap_file,1,512,fp);
     return 1;
   }
   return 0;
