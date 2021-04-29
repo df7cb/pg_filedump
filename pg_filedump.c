@@ -92,8 +92,10 @@ static int	exitCode = 0;
 /* Relmapper structs */
 /* Maybe ask community to put this into utils/relmapper.h? */
 #define RELMAPPER_FILEMAGIC   0x592717
-char magic_buffer[8];
-char relmap_file[512];
+#define RELMAPPER_MAGICSIZE   4
+#define RELMAPPER_FILESIZE    512
+char magic_buffer[RELMAPPER_MAGICSIZE];
+char relmap_file[RELMAPPER_FILESIZE];
 typedef struct RelMapping
 {
   Oid     mapoid;     /* OID of a catalog */
@@ -2032,14 +2034,31 @@ DumpFileContents(unsigned int blockOptions,
 int
 CheckForRelmap(FILE *fp)
 {
+  char m1[RELMAPPER_MAGICSIZE];
+  char m2[RELMAPPER_MAGICSIZE];
+  int bytesRead;
+  int magic_val;
+  magic_val = RELMAPPER_FILEMAGIC;
+
   // Get the first 8 bytes for comparison
-  fread(magic_buffer,1,8,fp);
+  bytesRead = fread(magic_buffer,1,RELMAPPER_MAGICSIZE,fp);
+  if ( bytesRead != RELMAPPER_MAGICSIZE )
+  {
+    printf("Read %d bytes, expected %d\n", bytesRead, RELMAPPER_MAGICSIZE);
+    return 0;
+  }
   // Put things back where we found them
   rewind(fp);
 
   // If it's a relmapper file, then ingest the whole thing
-  if ( (int) magic_buffer & RELMAPPER_FILEMAGIC ) {
-    fread(relmap_file,1,512,fp);
+  memcpy(m1,&magic_val,RELMAPPER_MAGICSIZE);
+  memcpy(m2,magic_buffer,RELMAPPER_MAGICSIZE);
+  if ( memcmp(m1,m2,RELMAPPER_MAGICSIZE) == 0 ) {
+    bytesRead = fread(relmap_file,1,RELMAPPER_FILESIZE,fp);
+    if ( bytesRead != RELMAPPER_FILESIZE ) {
+      printf("Read %d bytes, expected %d\n", bytesRead, RELMAPPER_FILESIZE);
+      return 0;
+    }
     return 1;
   }
   return 0;
