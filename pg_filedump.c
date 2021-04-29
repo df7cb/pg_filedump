@@ -83,19 +83,13 @@ static unsigned int bytesToFormat = 0;
 /* Block version number */
 static unsigned int blockVersion = 0;
 
-/* Flag to indicate filemap file */
-static unsigned int isMapperFile = 0;
+/* Flag to indicate pg_relnode.map file */
+static bool isRelMapFile = false;
 
 /* Program exit code */
 static int	exitCode = 0;
 
 /* Relmapper structs */
-/* Maybe ask community to put this into utils/relmapper.h? */
-#define RELMAPPER_FILEMAGIC   0x592717
-#define RELMAPPER_MAGICSIZE   4
-#define RELMAPPER_FILESIZE    512
-char magic_buffer[RELMAPPER_MAGICSIZE];
-char relmap_file[RELMAPPER_FILESIZE];
 typedef struct RelMapping
 {
   Oid     mapoid;     /* OID of a catalog */
@@ -154,8 +148,7 @@ static void FormatControl(char *buffer);
 static void FormatBinary(char *buffer,
 		unsigned int numBytes, unsigned int startIndex);
 static void DumpBinaryBlock(char *buffer);
-static int CheckForRelmap(FILE *fp);
-static int PrintMappings(RelMapFile *map);
+static int PrintRelMappings(void);
 
 
 /* Send properly formed usage information to the user. */
@@ -208,7 +201,9 @@ DisplayOptions(unsigned int validOptions)
 		 "  -c  Interpret the file listed as a control file\n"
 		 "  -f  Display formatted content dump along with interpretation\n"
 		 "  -S  Force block size to [blocksize]\n"
-     "If a pg_filenode.map file is passed in, all options will be ignored\n"
+		 "Additional functions:\n"
+		 "  -m  Interpret file as pg_relnode.map file and print contents (all\n"
+		 "      other options will be ignored)\n" 
 		 "\nReport bugs to <pgsql-bugs@postgresql.org>\n");
 }
 
@@ -460,7 +455,6 @@ ConsumeOptions(int numOptions, char **options)
 					fileName = options[x];
 					if (!(segmentOptions & SEGMENT_NUMBER_FORCED))
 						segmentNumber = GetSegmentNumberFromFileName(fileName);
-                                        isMapperFile = CheckForRelmap(fp);
 				}
 				else
 				{
@@ -544,6 +538,11 @@ ConsumeOptions(int numOptions, char **options)
 						/* Verify block checksums */
 					case 'k':
 						SET_OPTION(blockOptions, BLOCK_CHECKSUMS, 'k');
+						break;
+
+						/* Treat file as pg_relnode.map file */
+					case 'm':
+						isRelMapFile = true;
 						break;
 
 						/* Display old values. Ignore Xmax */
@@ -2032,49 +2031,47 @@ DumpFileContents(unsigned int blockOptions,
 }
 
 int
-CheckForRelmap(FILE *fp)
+PrintRelMappings(void)
 {
-  char m1[RELMAPPER_MAGICSIZE];
-  char m2[RELMAPPER_MAGICSIZE];
-  int bytesRead;
-  int magic_val;
-  magic_val = RELMAPPER_FILEMAGIC;
-
-  // Get the first 8 bytes for comparison
-  bytesRead = fread(magic_buffer,1,RELMAPPER_MAGICSIZE,fp);
-  if ( bytesRead != RELMAPPER_MAGICSIZE )
-  {
-    printf("Read %d bytes, expected %d\n", bytesRead, RELMAPPER_MAGICSIZE);
-    return 0;
-  }
-  // Put things back where we found them
-  rewind(fp);
-
-  // If it's a relmapper file, then ingest the whole thing
-  memcpy(m1,&magic_val,RELMAPPER_MAGICSIZE);
-  memcpy(m2,magic_buffer,RELMAPPER_MAGICSIZE);
-  if ( memcmp(m1,m2,RELMAPPER_MAGICSIZE) == 0 ) {
-    bytesRead = fread(relmap_file,1,RELMAPPER_FILESIZE,fp);
-    if ( bytesRead != RELMAPPER_FILESIZE ) {
-      printf("Read %d bytes, expected %d\n", bytesRead, RELMAPPER_FILESIZE);
-      return 0;
-    }
-    return 1;
-  }
-  return 0;
-}
-
-int
-PrintMappings(RelMapFile *map)
-{
+	// For storing ingested data
+	char charbuf[RELMAPPER_FILESIZE];
+	RelMapFile *map;
 	RelMapping *mappings;
 	RelMapping m;
+	int bytesRead;
 
-	// Print Metadata
-	printf("Magic Number: 0x%x\n",map->magic);
-	printf("Num Mappings: %d\n",map->num_mappings);
+	// For confirming Magic Number correctness
+	char m1[RELMAPPER_MAGICSIZE];
+	char m2[RELMAPPER_MAGICSIZE];
+	int magic_ref = RELMAPPER_FILEMAGIC;
+	int magic_val;
+
+	// Read in the file
+	rewind(fp); // Make sure to start from the beginning
+	bytesRead = fread(charbuf,1,RELMAPPER_FILESIZE,fp);
+	if ( bytesRead != RELMAPPER_FILESIZE ) {
+		printf("Read %d bytes, expected %d\n", bytesRead, RELMAPPER_FILESIZE);
+		return 0;
+	}
+
+	// Convert to RelMapFile type for usability
+	map = (RelMapFile *) charbuf;
+
+
+	// Check and print Magic Number correctness
+	printf("Magic Number: 0x%x",map->magic);
+	magic_val = map->magic;
+
+	memcpy(m1,&magic_ref,RELMAPPER_MAGICSIZE);
+	memcpy(m2,&magic_val,RELMAPPER_MAGICSIZE);
+	if ( memcmp(m1,m2,RELMAPPER_MAGICSIZE) == 0 ) {
+		printf(" (CORRECT)\n");
+	} else {
+		printf(" (INCORRECT)\n");
+	}
 
 	// Print Mappings
+	printf("Num Mappings: %d\n",map->num_mappings);
 	printf("Detailed Mappings list:\n");
 	mappings = map->mappings;
 	for (int i=0; i < map->num_mappings; i++) {
@@ -2100,6 +2097,11 @@ main(int argv, char **argc)
 	 * where encountered */
 	if (validOptions != OPT_RC_VALID)
 		DisplayOptions(validOptions);
+	else if (isRelMapFile)
+	{
+		CreateDumpFileHeader(argv, argc);
+		exitCode = PrintRelMappings();
+	}
 	else
 	{
 		/* Don't dump the header if we're dumping binary pages */
@@ -2116,21 +2118,17 @@ main(int argv, char **argc)
 		else if (!(blockOptions & BLOCK_FORCED))
 			blockSize = GetBlockSize(fp);
 
-                if (isMapperFile) {
-			exitCode = PrintMappings((RelMapFile *) relmap_file);
-                } else {
-			exitCode = DumpFileContents(blockOptions,
-					controlOptions,
-					fp,
-					blockSize,
-					blockStart,
-					blockEnd,
-					false /* is toast realtion */,
-					0,    /* no toast Oid */
-					0,    /* no toast external size */
-					NULL  /* no out toast value */
-					);
-                }
+		exitCode = DumpFileContents(blockOptions,
+				controlOptions,
+				fp,
+				blockSize,
+				blockStart,
+				blockEnd,
+				false /* is toast realtion */,
+				0,    /* no toast Oid */
+				0,    /* no toast external size */
+				NULL  /* no out toast value */
+				);
 	}
 
 	if (fp)

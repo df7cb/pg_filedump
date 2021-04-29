@@ -137,6 +137,12 @@ typedef enum optionReturnCodes
 #define EOF_ENCOUNTERED (-1)	/* Indicator for partial read */
 #define BYTES_PER_LINE 16		/* Format the binary 16 bytes per line */
 
+/* Constants for pg_relnode.map decoding */
+#define RELMAPPER_MAGICSIZE   4
+#define RELMAPPER_FILESIZE    512
+/* Maybe ask community to put this into utils/relmapper.h? */
+#define RELMAPPER_FILEMAGIC   0x592717
+
 extern char *fileName;
 
 /*
