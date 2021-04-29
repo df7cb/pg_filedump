@@ -83,7 +83,7 @@ static unsigned int bytesToFormat = 0;
 /* Block version number */
 static unsigned int blockVersion = 0;
 
-/* Flag to indicate pg_relnode.map file */
+/* Flag to indicate pg_filenode.map file */
 static bool isRelMapFile = false;
 
 /* Program exit code */
@@ -202,7 +202,7 @@ DisplayOptions(unsigned int validOptions)
 		 "  -f  Display formatted content dump along with interpretation\n"
 		 "  -S  Force block size to [blocksize]\n"
 		 "Additional functions:\n"
-		 "  -m  Interpret file as pg_relnode.map file and print contents (all\n"
+		 "  -m  Interpret file as pg_filenode.map file and print contents (all\n"
 		 "      other options will be ignored)\n" 
 		 "\nReport bugs to <pgsql-bugs@postgresql.org>\n");
 }
@@ -540,7 +540,7 @@ ConsumeOptions(int numOptions, char **options)
 						SET_OPTION(blockOptions, BLOCK_CHECKSUMS, 'k');
 						break;
 
-						/* Treat file as pg_relnode.map file */
+						/* Treat file as pg_filenode.map file */
 					case 'm':
 						isRelMapFile = true;
 						break;
