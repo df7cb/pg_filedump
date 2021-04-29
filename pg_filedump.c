@@ -2052,7 +2052,7 @@ PrintMappings(RelMapFile *map)
 	RelMapping m;
 
 	// Print Metadata
-	printf("Magic Number: %x\n",map->magic);
+	printf("Magic Number: 0x%x\n",map->magic);
 	printf("Num Mappings: %d\n",map->num_mappings);
 
 	// Print Mappings
