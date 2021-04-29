@@ -2045,6 +2045,7 @@ PrintRelMappings(void)
 	char m2[RELMAPPER_MAGICSIZE];
 	int magic_ref = RELMAPPER_FILEMAGIC;
 	int magic_val;
+	int num_loops;
 
 	// Read in the file
 	rewind(fp); // Make sure to start from the beginning
@@ -2074,7 +2075,16 @@ PrintRelMappings(void)
 	printf("Num Mappings: %d\n",map->num_mappings);
 	printf("Detailed Mappings list:\n");
 	mappings = map->mappings;
-	for (int i=0; i < map->num_mappings; i++) {
+
+	// Limit number of mappings as per MAX_MAPPINGS
+	num_loops = map->num_mappings;
+	if ( map->num_mappings > MAX_MAPPINGS ) {
+		num_loops = MAX_MAPPINGS;
+		printf("  NOTE: listing has been limited to the first %d mappings\n", MAX_MAPPINGS);
+		printf("        (perhaps your file is not a valid pg_filenode.map file?)\n");
+	}
+
+	for (int i=0; i < num_loops; i++) {
 		m = mappings[i];
 		printf("OID: %u\tFilenode: %u\n",
 			m.mapoid,
