@@ -886,7 +886,12 @@ decode_string(const char *buffer, unsigned int buff_size, unsigned int *out_size
 		 */
 		int			decompress_ret;
 		uint32		len = VARSIZE_4B(buffer);
-		uint32		decompressed_len = VARRAWSIZE_4B_C(buffer);
+		uint32		decompressed_len =
+#if PG_VERSION_NUM >= 140000
+									VARDATA_COMPRESSED_GET_EXTSIZE(buffer);
+#else
+									VARRAWSIZE_4B_C(buffer);
+#endif
 
 		if (len > buff_size)
 			return -1;
@@ -1038,12 +1043,21 @@ ReadStringFromToast(const char *buffer,
 		printf("  TOAST value. Raw size: %8d, external size: %8d, "
 				"value id: %6d, toast relation id: %6d\n",
 				toast_ptr.va_rawsize,
+#if PG_VERSION_NUM >= 140000
+				toast_ptr.va_extinfo & VARLENA_EXTSIZE_MASK,
+#else
 				toast_ptr.va_extsize,
+#endif
 				toast_ptr.va_valueid,
 				toast_ptr.va_toastrelid);
 
 		/* Extract TOASTed value */
-		toast_ext_size = toast_ptr.va_extsize;
+		toast_ext_size =
+#if PG_VERSION_NUM >= 140000
+						toast_ptr.va_extinfo & VARLENA_EXTSIZE_MASK;
+#else
+						toast_ptr.va_extsize;
+#endif
 		num_chunks = (toast_ext_size - 1) / TOAST_MAX_CHUNK_SIZE + 1;
 		printf("  Number of chunks: %d\n", num_chunks);
 
@@ -1074,7 +1088,11 @@ ReadStringFromToast(const char *buffer,
 					-1, /* no end block */
 					true, /* is toast relation */
 					toast_ptr.va_valueid,
+#if PG_VERSION_NUM >= 140000
+					toast_ptr.va_extinfo & VARLENA_EXTSIZE_MASK,
+#else
 					toast_ptr.va_extsize,
+#endif
 					toast_data);
 
 			if (result == 0)

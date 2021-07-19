@@ -1,7 +1,7 @@
 # View README.pg_filedump first
 
 # note this must match version macros in pg_filedump.h
-FD_VERSION=13.1
+FD_VERSION=14.0
 
 PROGRAM = pg_filedump
 OBJS = pg_filedump.o decode.o stringinfo.o

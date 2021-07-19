@@ -3,7 +3,7 @@
  *				   formatting heap (data), index and control files.
  *
  * Copyright (c) 2002-2010 Red Hat, Inc.
- * Copyright (c) 2011-2020, PostgreSQL Global Development Group
+ * Copyright (c) 2011-2021, PostgreSQL Global Development Group
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -137,7 +137,7 @@ DisplayOptions(unsigned int validOptions)
 		printf
 			("\nVersion %s (for %s)"
 			 "\nCopyright (c) 2002-2010 Red Hat, Inc."
-		  "\nCopyright (c) 2011-2020, PostgreSQL Global Development Group\n",
+		  "\nCopyright (c) 2011-2021, PostgreSQL Global Development Group\n",
 			 FD_VERSION, FD_PG_VERSION);
 
 	printf
@@ -1244,7 +1244,11 @@ FormatItem(char *buffer, unsigned int numBytes, unsigned int startIndex,
 	else if (formatAs == ITEM_SPG_LEAF)
 	{
 		/* It is an SpGistLeafTuple item, so dump the index header */
+#if PG_VERSION_NUM >= 140000
+		if (numBytes < SGLTHDRSZ(SGLT_GET_HASNULLMASK((SpGistLeafTuple) &(buffer[startIndex]))))
+#else
 		if (numBytes < SGLTHDRSZ)
+#endif
 		{
 			if (numBytes)
 			{
@@ -1258,7 +1262,11 @@ FormatItem(char *buffer, unsigned int numBytes, unsigned int startIndex,
 
 			printf("  State: %s  nextOffset: %u  Block Id: %u  linp Index: %u\n\n",
 				   spgist_tupstates[itup->tupstate],
+#if PG_VERSION_NUM >= 140000
+				   itup->t_info,
+#else
 				   itup->nextOffset,
+#endif
 				   ((uint32) ((itup->heapPtr.ip_blkid.bi_hi << 16) |
 							  (uint16) itup->heapPtr.ip_blkid.bi_lo)),
 				   itup->heapPtr.ip_posid);
@@ -1474,7 +1482,11 @@ FormatSpecial(char *buffer)
 					   btreeSection->btpo_prev, btreeSection->btpo_next,
 					   (btreeSection->
 						btpo_flags & BTP_DELETED) ? "Next XID" : "Level",
+#if PG_VERSION_NUM >= 140000
+					   btreeSection->btpo_level,
+#else
 					   btreeSection->btpo.level,
+#endif
 					   btreeSection->btpo_cycleid);
 			}
 			break;
