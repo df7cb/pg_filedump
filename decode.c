@@ -29,7 +29,8 @@
 static int
 ReadStringFromToast(const char *buffer,
 		unsigned int buff_size,
-		unsigned int* out_size);
+		unsigned int* out_size,
+		int (*parse_value)(const char *, int));
 
 /*
  * Utilities for manipulation of header information for compressed
@@ -103,6 +104,12 @@ decode_char(const char *buffer, unsigned int buff_size, unsigned int *out_size);
 
 static int
 decode_name(const char *buffer, unsigned int buff_size, unsigned int *out_size);
+
+static int
+decode_numeric(const char *buffer, unsigned int buff_size, unsigned int *out_size);
+
+static int
+extract_data(const char *buffer, unsigned int buff_size, unsigned int *out_size, int (*parse_value)(const char *, int));
 
 static int
 decode_ignore(const char *buffer, unsigned int buff_size, unsigned int *out_size);
@@ -180,6 +187,9 @@ static ParseCallbackTableItem callback_table[] =
 	},
 	{
 		"name", &decode_name
+	},
+	{
+		"numeric", &decode_numeric
 	},
 	{
 		"char", &decode_char
@@ -263,7 +273,7 @@ CopyAppend(const char *str)
  * Append given string to current COPY line and encode special symbols
  * like \r, \n, \t and \\.
  */
-static void
+static int
 CopyAppendEncode(const char *str, int orig_len)
 {
 	/*
@@ -339,6 +349,7 @@ CopyAppendEncode(const char *str, int orig_len)
 
 	tmp_buff[curr_offset] = '\0';
 	CopyAppend(tmp_buff);
+	return 0;
 }
 
 /* CopyAppend version with format string support */
@@ -347,6 +358,144 @@ CopyAppendEncode(const char *str, int orig_len)
 	  snprintf(__copy_format_buff, sizeof(__copy_format_buff), fmt, ##__VA_ARGS__); \
 	  CopyAppend(__copy_format_buff); \
   } while(0)
+
+/*
+ * Decode a numeric type and append the result to current COPY line
+ */
+static int
+CopyAppendNumeric(const char *buffer, int num_size)
+{
+       struct NumericData num;
+
+       num = *(struct NumericData *)buffer;
+       if (NUMERIC_IS_SPECIAL(&num))
+       {
+               if (NUMERIC_IS_NINF(&num))
+               {
+                       CopyAppend("-Infinity");
+                       return 0;
+               }
+               if (NUMERIC_IS_PINF(&num))
+               {
+                       CopyAppend("Infinity");
+                       return 0;
+               }
+               if (NUMERIC_IS_NAN(&num))
+               {
+                       CopyAppend("NaN");
+                       return 0;
+               }
+               return -2;
+       }
+       else
+       {
+               int				sign;
+               int				weight;
+               int				dscale;
+               int				ndigits;
+               int				i;
+               char			   *str;
+               char			   *cp;
+               char			   *endcp;
+               int				d;
+               bool				putit;
+               NumericDigit		d1;
+               NumericDigit		dig;
+               NumericDigit	   *digits;
+
+               sign = NUMERIC_SIGN(&num);
+               weight = NUMERIC_WEIGHT(&num);
+               dscale = NUMERIC_DSCALE(&num);
+
+               if (num_size == NUMERIC_HEADER_SIZE(&num))
+               {
+                       /* No digits - compressed zero. */
+                       CopyAppendFmt("%d", 0);
+                       return 0;
+               }
+               else
+               {
+                       ndigits = num_size / sizeof(NumericDigit);
+                       digits = (NumericDigit *)(buffer + NUMERIC_HEADER_SIZE(&num));
+                       i = (weight + 1) * DEC_DIGITS;
+                       if (i <= 0)
+                               i = 1;
+
+                       str = palloc(i + dscale + DEC_DIGITS + 2);
+                       cp = str;
+
+                       /*
+                        * Output a dash for negative values
+                        */
+                       if (sign == NUMERIC_NEG)
+                               *cp++ = '-';
+
+                       /*
+                        * Output all digits before the decimal point
+                        */
+                       if (weight < 0)
+                       {
+                               d = weight + 1;
+                               *cp++ = '0';
+                       }
+                       else
+                       {
+                               for (d = 0; d <= weight; d++)
+                               {
+                                       dig = (d < ndigits) ? digits[d] : 0;
+                                       /* In the first digit, suppress extra leading decimal zeroes */
+                                       putit = (d > 0);
+                                               d1 = dig / 1000;
+                                       dig -= d1 * 1000;
+                                       putit |= (d1 > 0);
+                                       if (putit)
+                                               *cp++ = d1 + '0';
+                                       d1 = dig / 100;
+                                       dig -= d1 * 100;
+                                       putit |= (d1 > 0);
+                                       if (putit)
+                                               *cp++ = d1 + '0';
+                                       d1 = dig / 10;
+                                       dig -= d1 * 10;
+                                       putit |= (d1 > 0);
+                                       if (putit)
+                                               *cp++ = d1 + '0';
+                                       *cp++ = dig + '0';
+                               }
+                       }
+
+                       /*
+                        * If requested, output a decimal point and all the digits that follow it.
+                        * We initially put out a multiple of DEC_DIGITS digits, then truncate if
+                        * needed.
+                        */
+                       if (dscale > 0)
+                       {
+                               *cp++ = '.';
+                               endcp = cp + dscale;
+                               for (i = 0; i < dscale; d++, i += DEC_DIGITS)
+                               {
+                                       dig = (d >= 0 && d < ndigits) ? digits[d] : 0;
+                                       d1 = dig / 1000;
+                                       dig -= d1 * 1000;
+                                       *cp++ = d1 + '0';
+                                       d1 = dig / 100;
+                                       dig -= d1 * 100;
+                                       *cp++ = d1 + '0';
+                                       d1 = dig / 10;
+                                       dig -= d1 * 10;
+                                       *cp++ = d1 + '0';
+                                       *cp++ = dig + '0';
+                               }
+                               cp = endcp;
+                       }
+                       *cp = '\0';
+                       CopyAppend(str);
+                       pfree(str);
+                       return 0;
+               }
+       }
+}
 
 /* Discard accumulated COPY line */
 static void
@@ -811,6 +960,16 @@ decode_name(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 	return 0;
 }
 
+/*
+ * Decode numeric type.
+ */
+static int
+decode_numeric(const char *buffer, unsigned int buff_size, unsigned int *out_size)
+{
+       int result = extract_data(buffer, buff_size, out_size, &CopyAppendNumeric);
+       return result;
+}
+
 /* Decode a char type */
 static int
 decode_char(const char *buffer, unsigned int buff_size, unsigned int *out_size)
@@ -835,7 +994,19 @@ decode_ignore(const char *buffer, unsigned int buff_size, unsigned int *out_size
 static int
 decode_string(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 {
+       int result = extract_data(buffer, buff_size, out_size, &CopyAppendEncode);
+       return result;
+}
+
+/*
+ * Align data, parse varlena header, detoast and decompress.
+ * Last parameters responds for actual parsing according to type.
+ */
+static int
+extract_data(const char *buffer, unsigned int buff_size, unsigned int *out_size, int (*parse_value)(const char *, int))
+{
 	int			padding = 0;
+	int			result	= 0;
 
 	/* Skip padding bytes. */
 	while (*buffer == 0x00)
@@ -854,14 +1025,13 @@ decode_string(const char *buffer, unsigned int buff_size, unsigned int *out_size
 		 * 00000001 1-byte length word, unaligned, TOAST pointer
 		 */
 		uint32		len = VARSIZE_EXTERNAL(buffer);
-		int			result = 0;
 
 		if (len > buff_size)
 			return -1;
 
 		if (blockOptions & BLOCK_DECODE_TOAST)
 		{
-			result = ReadStringFromToast(buffer, buff_size, out_size);
+			result = ReadStringFromToast(buffer, buff_size, out_size, parse_value);
 		}
 		else
 		{
@@ -883,9 +1053,9 @@ decode_string(const char *buffer, unsigned int buff_size, unsigned int *out_size
 		if (len > buff_size)
 			return -1;
 
-		CopyAppendEncode(buffer + 1, len - 1);
+		result = parse_value(buffer + 1, len - 1);
 		*out_size = padding + len;
-		return 0;
+		return result;
 	}
 
 	if (VARATT_IS_4B_U(buffer) && buff_size >= 4)
@@ -898,9 +1068,9 @@ decode_string(const char *buffer, unsigned int buff_size, unsigned int *out_size
 		if (len > buff_size)
 			return -1;
 
-		CopyAppendEncode(buffer + 4, len - 4);
+		result = parse_value(buffer + 4, len - 4);
 		*out_size = padding + len;
-		return 0;
+		return result;
 	}
 
 	if (VARATT_IS_4B_C(buffer) && buff_size >= 8)
@@ -911,7 +1081,9 @@ decode_string(const char *buffer, unsigned int buff_size, unsigned int *out_size
 		int						decompress_ret;
 		uint32					len = VARSIZE_4B(buffer);
 		uint32					decompressed_len = 0;
+#if PG_VERSION_NUM >= 140000
 		ToastCompressionId		cmid;
+#endif
 
 #if PG_VERSION_NUM >= 140000
 		decompressed_len = VARDATA_COMPRESSED_GET_EXTSIZE(buffer);
@@ -934,31 +1106,32 @@ decode_string(const char *buffer, unsigned int buff_size, unsigned int *out_size
 			return 0;
 		}
 
+#if PG_VERSION_NUM >= 140000
 		cmid = VARDATA_COMPRESSED_GET_COMPRESS_METHOD(buffer);
 		switch(cmid)
 		{
 			case TOAST_PGLZ_COMPRESSION_ID:
 				decompress_ret = pglz_decompress(VARDATA_4B_C(buffer), len - 2 * sizeof(uint32),
-												 decompress_tmp_buff, decompressed_len
-#if PG_VERSION_NUM >= 120000
-												 , true
-#endif
-												 );
+												 decompress_tmp_buff, decompressed_len, true);
 				break;
-			case TOAST_LZ4_COMPRESSION_ID:
 #ifdef USE_LZ4
+			case TOAST_LZ4_COMPRESSION_ID:
 				decompress_ret = LZ4_decompress_safe(VARDATA_4B_C(buffer), decompress_tmp_buff,
 													 len - 2 * sizeof(uint32), decompressed_len);
 				break;
-#else
-				printf("Error: compression method lz4 not supported.\n");
-				printf("Try to rebuild pg_filedump for PostgreSQL server of version 14+ with --with-lz4 option.\n");
-				return -2;
 #endif
 			default:
 				decompress_ret = -1;
 				break;
 		}
+#else /* PG_VERSION_NUM < 140000 */
+		decompress_ret = pglz_decompress(VARDATA_4B_C(buffer), len - 2 * sizeof(uint32),
+										 decompress_tmp_buff, decompressed_len
+#if PG_VERSION_NUM >= 120000
+										 , true
+#endif
+										 );
+#endif /* PG_VERSION_NUM >= 140000 */
 
 		if ((decompress_ret != decompressed_len) || (decompress_ret < 0))
 		{
@@ -968,9 +1141,9 @@ decode_string(const char *buffer, unsigned int buff_size, unsigned int *out_size
 			return 0;
 		}
 
-		CopyAppendEncode(decompress_tmp_buff, decompressed_len);
+		result = parse_value(decompress_tmp_buff, decompressed_len);
 		*out_size = padding + len;
-		return 0;
+		return result;
 	}
 
 	return -9;
@@ -1033,7 +1206,7 @@ FormatDecode(const char *tupleData, unsigned int tupleSize)
 	CopyFlush();
 }
 
-static int DumpCompressedString(const char *data, int32 compressed_size)
+static int DumpCompressedString(const char *data, int32 compressed_size, int (*parse_value)(const char *, int))
 {
 	int						decompress_ret;
 	char				   *decompress_tmp_buff = malloc(TOAST_COMPRESS_RAWSIZE(data));
@@ -1087,7 +1260,8 @@ static int DumpCompressedString(const char *data, int32 compressed_size)
 static int
 ReadStringFromToast(const char *buffer,
 		unsigned int buff_size,
-		unsigned int* out_size)
+		unsigned int* out_size,
+		int (*parse_value)(const char *, int))
 {
 	int		result = 0;
 
@@ -1160,9 +1334,9 @@ ReadStringFromToast(const char *buffer,
 			if (result == 0)
 			{
 				if (VARATT_EXTERNAL_IS_COMPRESSED(toast_ptr))
-					result = DumpCompressedString(toast_data, toast_ext_size);
+					result = DumpCompressedString(toast_data, toast_ext_size, parse_value);
 				else
-					CopyAppendEncode(toast_data, toast_ext_size);
+					result = parse_value(toast_data, toast_ext_size);
 			}
 			else
 			{

@@ -85,6 +85,7 @@ The following options are valid for heap and index files:
         * json
         * macaddr
         * name
+        * numeric
         * oid
         * real
         * serial
