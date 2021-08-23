@@ -15,7 +15,11 @@ PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
 
 # avoid linking against all libs that the server links against (xml, selinux, ...)
-LIBS = $(libpq_pgport)
+ifneq ($(findstring -llz4,$(LIBS)),)
+       LIBS = $(libpq_pgport) -llz4
+else
+       LIBS = $(libpq_pgport)
+endif
 
 DISTFILES= README.pg_filedump Makefile Makefile.contrib \
 	pg_filedump.h pg_filedump.c decode.h decode.c stringinfo.c
