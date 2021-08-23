@@ -4,6 +4,13 @@
 #include <lib/stringinfo.h>
 #include <access/htup_details.h>
 #include <access/tupmacs.h>
+#if PG_VERSION_NUM >= 140000
+#ifdef USE_LZ4
+#include <lz4.h>
+#endif
+#include <access/toast_compression.h>
+#include <access/toast_internals.h>
+#endif
 #if PG_VERSION_NUM >= 130000
 #include <access/detoast.h>
 #include <access/heaptoast.h>
@@ -28,7 +35,24 @@ ReadStringFromToast(const char *buffer,
  * Utilities for manipulation of header information for compressed
  * toast entries.
  */
-#define TOAST_COMPRESS_RAWSIZE(ptr) (*(uint32 *) ptr)
+#if PG_VERSION_NUM < 140000
+/*
+ * These macros define the "saved size" portion of va_extinfo.  Its remaining
+ * two high-order bits identify the compression method.
+ * Before std14 only pglz compression method existed (with 00 bits).
+ */
+#define VARLENA_EXTSIZE_BITS   30
+#define VARLENA_EXTSIZE_MASK   ((1U << VARLENA_EXTSIZE_BITS) - 1)
+#define VARDATA_COMPRESSED_GET_COMPRESS_METHOD(ptr) ((*((uint32 *)ptr + 1)) >> VARLENA_EXTSIZE_BITS)
+typedef enum ToastCompressionId
+{
+	TOAST_PGLZ_COMPRESSION_ID = 0,
+	TOAST_LZ4_COMPRESSION_ID = 1,
+	TOAST_INVALID_COMPRESSION_ID = 2
+} ToastCompressionId;
+#endif
+#define TOAST_COMPRESS_RAWSIZE(ptr) ((*(uint32 *) ptr) & VARLENA_EXTSIZE_MASK)
+#define TOAST_COMPRESS_RAWMETHOD(ptr) ((*(uint32 *) ptr) >> VARLENA_EXTSIZE_BITS)
 #define TOAST_COMPRESS_RAWDATA(ptr) (ptr + sizeof(uint32))
 #define TOAST_COMPRESS_HEADER_SIZE (sizeof(uint32))
 
@@ -884,9 +908,17 @@ decode_string(const char *buffer, unsigned int buff_size, unsigned int *out_size
 		/*
 		 * xxxxxx10 4-byte length word, aligned, *compressed* data (up to 1G)
 		 */
-		int			decompress_ret;
-		uint32		len = VARSIZE_4B(buffer);
-		uint32		decompressed_len = VARRAWSIZE_4B_C(buffer);
+		int						decompress_ret;
+		uint32					len = VARSIZE_4B(buffer);
+		uint32					decompressed_len = 0;
+		ToastCompressionId		cmid;
+
+#if PG_VERSION_NUM >= 140000
+		decompressed_len = VARDATA_COMPRESSED_GET_EXTSIZE(buffer);
+#else
+		decompressed_len = VARRAWSIZE_4B_C(buffer);
+#endif
+
 
 		if (len > buff_size)
 			return -1;
@@ -902,12 +934,32 @@ decode_string(const char *buffer, unsigned int buff_size, unsigned int *out_size
 			return 0;
 		}
 
-		decompress_ret = pglz_decompress(VARDATA_4B_C(buffer), len - 2 * sizeof(uint32),
-										 decompress_tmp_buff, decompressed_len
+		cmid = VARDATA_COMPRESSED_GET_COMPRESS_METHOD(buffer);
+		switch(cmid)
+		{
+			case TOAST_PGLZ_COMPRESSION_ID:
+				decompress_ret = pglz_decompress(VARDATA_4B_C(buffer), len - 2 * sizeof(uint32),
+												 decompress_tmp_buff, decompressed_len
 #if PG_VERSION_NUM >= 120000
-										 , true
+												 , true
 #endif
-										 );
+												 );
+				break;
+			case TOAST_LZ4_COMPRESSION_ID:
+#ifdef USE_LZ4
+				decompress_ret = LZ4_decompress_safe(VARDATA_4B_C(buffer), decompress_tmp_buff,
+													 len - 2 * sizeof(uint32), decompressed_len);
+				break;
+#else
+				printf("Error: compression method lz4 not supported.\n");
+				printf("Try to rebuild pg_filedump for PostgreSQL server of version 14+ with --with-lz4 option.\n");
+				return -2;
+#endif
+			default:
+				decompress_ret = -1;
+				break;
+		}
+
 		if ((decompress_ret != decompressed_len) || (decompress_ret < 0))
 		{
 			printf("WARNING: Unable to decompress a string. Data is corrupted.\n");
@@ -983,26 +1035,48 @@ FormatDecode(const char *tupleData, unsigned int tupleSize)
 
 static int DumpCompressedString(const char *data, int32 decompressed_size)
 {
-	int		decompress_ret;
-	char   *decompress_tmp_buff = malloc(TOAST_COMPRESS_RAWSIZE(data));
+	int						decompress_ret;
+	char				   *decompress_tmp_buff = malloc(TOAST_COMPRESS_RAWSIZE(data));
+	ToastCompressionId		cmid;
 
-	decompress_ret = pglz_decompress(TOAST_COMPRESS_RAWDATA(data),
-			decompressed_size - TOAST_COMPRESS_HEADER_SIZE,
-			decompress_tmp_buff, TOAST_COMPRESS_RAWSIZE(data)
+	cmid = TOAST_COMPRESS_RAWMETHOD(data);
+	switch(cmid)
+	{
+		case TOAST_PGLZ_COMPRESSION_ID:
+			decompress_ret = pglz_decompress(TOAST_COMPRESS_RAWDATA(data),
+											 decompressed_size - TOAST_COMPRESS_HEADER_SIZE,
+											 decompress_tmp_buff, TOAST_COMPRESS_RAWSIZE(data)
 #if PG_VERSION_NUM >= 120000
-			, true
+											 , true
 #endif
-			);
+											 );
+			break;
+		case TOAST_LZ4_COMPRESSION_ID:
+#ifdef USE_LZ4
+			decompress_ret = LZ4_decompress_safe(TOAST_COMPRESS_RAWDATA(data),
+												 decompress_tmp_buff, decompressed_size - TOAST_COMPRESS_HEADER_SIZE,
+												 TOAST_COMPRESS_RAWSIZE(data));
+			break;
+#else
+			printf("Error: compression method lz4 not supported.\n");
+			printf("Try to rebuild pg_filedump for PostgreSQL server of version 14+ with --with-lz4 option.\n");
+			return -2;
+#endif
+		default:
+			decompress_ret = -1;
+			break;
+	}
+
 	if ((decompress_ret != TOAST_COMPRESS_RAWSIZE(data)) ||
 			(decompress_ret < 0))
 	{
 		printf("WARNING: Unable to decompress a string. Data is corrupted.\n");
 		printf("Returned %d while expected %d.\n", decompress_ret,
-				decompressed_size);
+				TOAST_COMPRESS_RAWSIZE(data));
 	}
 	else
 	{
-		CopyAppendEncode(decompress_tmp_buff, *((uint32 *)data));
+		CopyAppendEncode(decompress_tmp_buff, decompress_ret);
 	}
 
 	free(decompress_tmp_buff);
@@ -1035,15 +1109,21 @@ ReadStringFromToast(const char *buffer,
 		unsigned int control_options = 0;
 
 		VARATT_EXTERNAL_GET_POINTER(toast_ptr, buffer);
+
+		/* Extract TOASTed value */
+#if PG_VERSION_NUM >= 140000
+		toast_ext_size = VARATT_EXTERNAL_GET_EXTSIZE(toast_ptr);
+#else
+		toast_ext_size = toast_ptr.va_extsize;
+#endif
+
 		printf("  TOAST value. Raw size: %8d, external size: %8d, "
 				"value id: %6d, toast relation id: %6d\n",
 				toast_ptr.va_rawsize,
-				toast_ptr.va_extsize,
+				toast_ext_size,
 				toast_ptr.va_valueid,
 				toast_ptr.va_toastrelid);
 
-		/* Extract TOASTed value */
-		toast_ext_size = toast_ptr.va_extsize;
 		num_chunks = (toast_ext_size - 1) / TOAST_MAX_CHUNK_SIZE + 1;
 		printf("  Number of chunks: %d\n", num_chunks);
 
@@ -1074,7 +1154,7 @@ ReadStringFromToast(const char *buffer,
 					-1, /* no end block */
 					true, /* is toast relation */
 					toast_ptr.va_valueid,
-					toast_ptr.va_extsize,
+					toast_ext_size,
 					toast_data);
 
 			if (result == 0)
