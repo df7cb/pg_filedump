@@ -1033,7 +1033,7 @@ FormatDecode(const char *tupleData, unsigned int tupleSize)
 	CopyFlush();
 }
 
-static int DumpCompressedString(const char *data, int32 decompressed_size)
+static int DumpCompressedString(const char *data, int32 compressed_size)
 {
 	int						decompress_ret;
 	char				   *decompress_tmp_buff = malloc(TOAST_COMPRESS_RAWSIZE(data));
@@ -1044,7 +1044,7 @@ static int DumpCompressedString(const char *data, int32 decompressed_size)
 	{
 		case TOAST_PGLZ_COMPRESSION_ID:
 			decompress_ret = pglz_decompress(TOAST_COMPRESS_RAWDATA(data),
-											 decompressed_size - TOAST_COMPRESS_HEADER_SIZE,
+											 compressed_size - TOAST_COMPRESS_HEADER_SIZE,
 											 decompress_tmp_buff, TOAST_COMPRESS_RAWSIZE(data)
 #if PG_VERSION_NUM >= 120000
 											 , true
@@ -1054,7 +1054,7 @@ static int DumpCompressedString(const char *data, int32 decompressed_size)
 		case TOAST_LZ4_COMPRESSION_ID:
 #ifdef USE_LZ4
 			decompress_ret = LZ4_decompress_safe(TOAST_COMPRESS_RAWDATA(data),
-												 decompress_tmp_buff, decompressed_size - TOAST_COMPRESS_HEADER_SIZE,
+												 decompress_tmp_buff, compressed_size - TOAST_COMPRESS_HEADER_SIZE,
 												 TOAST_COMPRESS_RAWSIZE(data));
 			break;
 #else
