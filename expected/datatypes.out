@@ -1,0 +1,1127 @@
+-- 64 bit output in *.out, 32 bit output in *_3.out
+select oid as datoid from pg_database where datname = current_database() \gset
+----------------------------------------------------------------------------------------------
+create table "int,text" (i int, t text);
+insert into "int,text" values (1, 'one'), (null, 'two'), (3, null), (4, 'four');
+\set relname int,text
+\ir run_test.sql
+\echo Testing :relname
+Testing int,text
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: int,text.heap
+* Options used: -D int,text
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
+ Block: Size 8192  Version    4            Upper    8056 (0x1f78)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    4                      Free Space: 8016
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 40
+
+<Data> -----
+ Item   1 -- Length:   32  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: 1	one
+ Item   2 -- Length:   28  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: \N	two
+ Item   3 -- Length:   28  Offset: 8096 (0x1fa0)  Flags: NORMAL
+COPY: 3	\N
+ Item   4 -- Length:   33  Offset: 8056 (0x1f78)  Flags: NORMAL
+COPY: 4	four
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+-- do one test without options
+\! pg_filedump int,text.heap | sed -e 's/logid      ./logid      ./' -e 's/recoff 0x......../recoff 0x......../'
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: int,text.heap
+* Options used: None
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
+ Block: Size 8192  Version    4            Upper    8056 (0x1f78)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    4                      Free Space: 8016
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 40
+
+<Data> -----
+ Item   1 -- Length:   32  Offset: 8160 (0x1fe0)  Flags: NORMAL
+ Item   2 -- Length:   28  Offset: 8128 (0x1fc0)  Flags: NORMAL
+ Item   3 -- Length:   28  Offset: 8096 (0x1fa0)  Flags: NORMAL
+ Item   4 -- Length:   33  Offset: 8056 (0x1f78)  Flags: NORMAL
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+----------------------------------------------------------------------------------------------
+create table bigint (x bigint);
+insert into bigint values (-1), (0), (1), (null);
+\set relname bigint
+\ir run_test.sql
+\echo Testing :relname
+Testing bigint
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: bigint.heap
+* Options used: -D bigint
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
+ Block: Size 8192  Version    4            Upper    8072 (0x1f88)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    4                      Free Space: 8032
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 40
+
+<Data> -----
+ Item   1 -- Length:   32  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: -1
+ Item   2 -- Length:   32  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: 0
+ Item   3 -- Length:   32  Offset: 8096 (0x1fa0)  Flags: NORMAL
+COPY: 1
+ Item   4 -- Length:   24  Offset: 8072 (0x1f88)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table bool (x bool);
+insert into bool values (true), (false), (null);
+\set relname bool
+\ir run_test.sql
+\echo Testing :relname
+Testing bool
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: bool.heap
+* Options used: -D bool
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      36 (0x0024)
+ Block: Size 8192  Version    4            Upper    8104 (0x1fa8)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    3                      Free Space: 8068
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 36
+
+<Data> -----
+ Item   1 -- Length:   25  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: t
+ Item   2 -- Length:   25  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: f
+ Item   3 -- Length:   24  Offset: 8104 (0x1fa8)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table char (x char);
+insert into char values ('x'), (null);
+\set relname char
+\ir run_test.sql
+\echo Testing :relname
+Testing char
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: char.heap
+* Options used: -D char
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      32 (0x0020)
+ Block: Size 8192  Version    4            Upper    8136 (0x1fc8)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    2                      Free Space: 8104
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 32
+
+<Data> -----
+ Item   1 -- Length:   26  Offset: 8160 (0x1fe0)  Flags: NORMAL
+Error: unable to decode a tuple, 1 bytes left, 0 expected. Partial data: 
+ Item   2 -- Length:   24  Offset: 8136 (0x1fc8)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table "charN" (x char(5));
+insert into "charN" values ('x'), ('xxxxx'), (null);
+\set relname charN
+\ir run_test.sql
+\echo Testing :relname
+Testing charN
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: charN.heap
+* Options used: -D charN
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      36 (0x0024)
+ Block: Size 8192  Version    4            Upper    8104 (0x1fa8)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    3                      Free Space: 8068
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 36
+
+<Data> -----
+ Item   1 -- Length:   30  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: x    
+ Item   2 -- Length:   30  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: xxxxx
+ Item   3 -- Length:   24  Offset: 8104 (0x1fa8)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table date (x date);
+insert into date values ('2000-01-01'), ('1900-02-02'), ('2100-12-31'), ('infinity'), ('-infinity'), (null);
+\set relname date
+\ir run_test.sql
+\echo Testing :relname
+Testing date
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: date.heap
+* Options used: -D date
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      48 (0x0030)
+ Block: Size 8192  Version    4            Upper    8008 (0x1f48)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    6                      Free Space: 7960
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 48
+
+<Data> -----
+ Item   1 -- Length:   28  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: 2000-01-01
+ Item   2 -- Length:   28  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: 1900-02-02
+ Item   3 -- Length:   28  Offset: 8096 (0x1fa0)  Flags: NORMAL
+COPY: 2100-12-31
+ Item   4 -- Length:   28  Offset: 8064 (0x1f80)  Flags: NORMAL
+COPY: 5881610-07-11
+ Item   5 -- Length:   28  Offset: 8032 (0x1f60)  Flags: NORMAL
+COPY: 5881610-07-12
+ Item   6 -- Length:   24  Offset: 8008 (0x1f48)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table float4 (x float4);
+insert into float4 values (0), ('-0'), ('-infinity'), ('infinity'), ('NaN'), (null);
+\set relname float4
+\ir run_test.sql
+\echo Testing :relname
+Testing float4
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: float4.heap
+* Options used: -D float4
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      48 (0x0030)
+ Block: Size 8192  Version    4            Upper    8008 (0x1f48)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    6                      Free Space: 7960
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 48
+
+<Data> -----
+ Item   1 -- Length:   28  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: 0.000000000000
+ Item   2 -- Length:   28  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: -0.000000000000
+ Item   3 -- Length:   28  Offset: 8096 (0x1fa0)  Flags: NORMAL
+COPY: -Infinity
+ Item   4 -- Length:   28  Offset: 8064 (0x1f80)  Flags: NORMAL
+COPY: Infinity
+ Item   5 -- Length:   28  Offset: 8032 (0x1f60)  Flags: NORMAL
+COPY: NaN
+ Item   6 -- Length:   24  Offset: 8008 (0x1f48)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table float8 (x float8);
+insert into float8 values (0), ('-0'), ('-infinity'), ('infinity'), ('NaN'), (null);
+\set relname float8
+\ir run_test.sql
+\echo Testing :relname
+Testing float8
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: float8.heap
+* Options used: -D float8
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      48 (0x0030)
+ Block: Size 8192  Version    4            Upper    8008 (0x1f48)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    6                      Free Space: 7960
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 48
+
+<Data> -----
+ Item   1 -- Length:   32  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: 0.000000000000
+ Item   2 -- Length:   32  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: -0.000000000000
+ Item   3 -- Length:   32  Offset: 8096 (0x1fa0)  Flags: NORMAL
+COPY: -Infinity
+ Item   4 -- Length:   32  Offset: 8064 (0x1f80)  Flags: NORMAL
+COPY: Infinity
+ Item   5 -- Length:   32  Offset: 8032 (0x1f60)  Flags: NORMAL
+COPY: NaN
+ Item   6 -- Length:   24  Offset: 8008 (0x1f48)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table int (x int);
+insert into int values (-1), (0), (1), (null);
+\set relname int
+\ir run_test.sql
+\echo Testing :relname
+Testing int
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: int.heap
+* Options used: -D int
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
+ Block: Size 8192  Version    4            Upper    8072 (0x1f88)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    4                      Free Space: 8032
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 40
+
+<Data> -----
+ Item   1 -- Length:   28  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: -1
+ Item   2 -- Length:   28  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: 0
+ Item   3 -- Length:   28  Offset: 8096 (0x1fa0)  Flags: NORMAL
+COPY: 1
+ Item   4 -- Length:   24  Offset: 8072 (0x1f88)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table json (x json);
+insert into json values ('1'), ('"one"'), ('{"a":"b"}'), ('null'), (null);
+\set relname json
+\ir run_test.sql
+\echo Testing :relname
+Testing json
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: json.heap
+* Options used: -D json
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      44 (0x002c)
+ Block: Size 8192  Version    4            Upper    8032 (0x1f60)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    5                      Free Space: 7988
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 44
+
+<Data> -----
+ Item   1 -- Length:   26  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: 1
+ Item   2 -- Length:   30  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: "one"
+ Item   3 -- Length:   34  Offset: 8088 (0x1f98)  Flags: NORMAL
+COPY: {"a":"b"}
+ Item   4 -- Length:   29  Offset: 8056 (0x1f78)  Flags: NORMAL
+COPY: null
+ Item   5 -- Length:   24  Offset: 8032 (0x1f60)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table macaddr (x macaddr);
+insert into macaddr values ('00:10:20:30:40:50'), (null);
+\set relname macaddr
+\ir run_test.sql
+\echo Testing :relname
+Testing macaddr
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: macaddr.heap
+* Options used: -D macaddr
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      32 (0x0020)
+ Block: Size 8192  Version    4            Upper    8136 (0x1fc8)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    2                      Free Space: 8104
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 32
+
+<Data> -----
+ Item   1 -- Length:   30  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: 00:10:20:30:40:50
+ Item   2 -- Length:   24  Offset: 8136 (0x1fc8)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table name (x name);
+insert into name values ('name'), ('1234567890123456789012345678901234567890123456789012345678901234567890'), (null);
+\set relname name
+\ir run_test.sql
+\echo Testing :relname
+Testing name
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: name.heap
+* Options used: -D name
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      36 (0x0024)
+ Block: Size 8192  Version    4            Upper    7992 (0x1f38)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    3                      Free Space: 7956
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 36
+
+<Data> -----
+ Item   1 -- Length:   88  Offset: 8104 (0x1fa8)  Flags: NORMAL
+COPY: name
+ Item   2 -- Length:   88  Offset: 8016 (0x1f50)  Flags: NORMAL
+COPY: 123456789012345678901234567890123456789012345678901234567890123
+ Item   3 -- Length:   24  Offset: 7992 (0x1f38)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table numeric (x numeric);
+insert into numeric values (0), ('12341234'), ('-567890'), ('-Infinity'), ('Infinity'), ('NaN'), (null);
+\set relname numeric
+\ir run_test.sql
+\echo Testing :relname
+Testing numeric
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: numeric.heap
+* Options used: -D numeric
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      52 (0x0034)
+ Block: Size 8192  Version    4            Upper    7976 (0x1f28)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    7                      Free Space: 7924
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 52
+
+<Data> -----
+ Item   1 -- Length:   27  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: 0
+ Item   2 -- Length:   31  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: 12341234
+ Item   3 -- Length:   31  Offset: 8096 (0x1fa0)  Flags: NORMAL
+COPY: -567890
+ Item   4 -- Length:   27  Offset: 8064 (0x1f80)  Flags: NORMAL
+COPY: -Infinity
+ Item   5 -- Length:   27  Offset: 8032 (0x1f60)  Flags: NORMAL
+COPY: Infinity
+ Item   6 -- Length:   27  Offset: 8000 (0x1f40)  Flags: NORMAL
+COPY: NaN
+ Item   7 -- Length:   24  Offset: 7976 (0x1f28)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table oid (x oid);
+insert into oid values (-1), (0), (1), (null);
+\set relname oid
+\ir run_test.sql
+\echo Testing :relname
+Testing oid
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: oid.heap
+* Options used: -D oid
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
+ Block: Size 8192  Version    4            Upper    8072 (0x1f88)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    4                      Free Space: 8032
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 40
+
+<Data> -----
+ Item   1 -- Length:   28  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: -1
+ Item   2 -- Length:   28  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: 0
+ Item   3 -- Length:   28  Offset: 8096 (0x1fa0)  Flags: NORMAL
+COPY: 1
+ Item   4 -- Length:   24  Offset: 8072 (0x1f88)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table smallint (x smallint);
+insert into smallint values (-1), (0), (1), (null);
+\set relname smallint
+\ir run_test.sql
+\echo Testing :relname
+Testing smallint
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: smallint.heap
+* Options used: -D smallint
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
+ Block: Size 8192  Version    4            Upper    8072 (0x1f88)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    4                      Free Space: 8032
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 40
+
+<Data> -----
+ Item   1 -- Length:   26  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: -1
+ Item   2 -- Length:   26  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: 0
+ Item   3 -- Length:   26  Offset: 8096 (0x1fa0)  Flags: NORMAL
+COPY: 1
+ Item   4 -- Length:   24  Offset: 8072 (0x1f88)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table text (x text);
+insert into text values ('hello world'), (null);
+\set relname text
+\ir run_test.sql
+\echo Testing :relname
+Testing text
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: text.heap
+* Options used: -D text
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      32 (0x0020)
+ Block: Size 8192  Version    4            Upper    8128 (0x1fc0)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    2                      Free Space: 8096
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 32
+
+<Data> -----
+ Item   1 -- Length:   36  Offset: 8152 (0x1fd8)  Flags: NORMAL
+COPY: hello world
+ Item   2 -- Length:   24  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table time (x time);
+insert into time values ('00:00'), ('23:59:59'), ('23:59:60'), (null);
+\set relname time
+\ir run_test.sql
+\echo Testing :relname
+Testing time
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: time.heap
+* Options used: -D time
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
+ Block: Size 8192  Version    4            Upper    8072 (0x1f88)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    4                      Free Space: 8032
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 40
+
+<Data> -----
+ Item   1 -- Length:   32  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: 00:00:00.000000
+ Item   2 -- Length:   32  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: 23:59:59.000000
+ Item   3 -- Length:   32  Offset: 8096 (0x1fa0)  Flags: NORMAL
+COPY: 24:00:00.000000
+ Item   4 -- Length:   24  Offset: 8072 (0x1f88)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table timestamp (x timestamp);
+insert into timestamp values ('2000-01-01 00:00'), ('infinity'), ('-infinity'), (null);
+\set relname timestamp
+\ir run_test.sql
+\echo Testing :relname
+Testing timestamp
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: timestamp.heap
+* Options used: -D timestamp
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
+ Block: Size 8192  Version    4            Upper    8072 (0x1f88)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    4                      Free Space: 8032
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 40
+
+<Data> -----
+ Item   1 -- Length:   32  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: 2000-01-01 00:00:00.000000
+ Item   2 -- Length:   32  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: 294277-01-09 04:00:54.775807
+ Item   3 -- Length:   32  Offset: 8096 (0x1fa0)  Flags: NORMAL
+COPY: 11468944-01-11 19:59:05.224192
+ Item   4 -- Length:   24  Offset: 8072 (0x1f88)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table timetz (x timetz);
+insert into timetz values ('00:00 Etc/UTC'), ('23:59:59 Etc/UTC'), ('23:59:60 Etc/UTC'), (null);
+\set relname timetz
+\ir run_test.sql
+\echo Testing :relname
+Testing timetz
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: timetz.heap
+* Options used: -D timetz
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
+ Block: Size 8192  Version    4            Upper    8048 (0x1f70)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    4                      Free Space: 8008
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 40
+
+<Data> -----
+ Item   1 -- Length:   36  Offset: 8152 (0x1fd8)  Flags: NORMAL
+COPY: 00:00:00.000000-00:00
+ Item   2 -- Length:   36  Offset: 8112 (0x1fb0)  Flags: NORMAL
+COPY: 23:59:59.000000-00:00
+ Item   3 -- Length:   36  Offset: 8072 (0x1f88)  Flags: NORMAL
+COPY: 24:00:00.000000-00:00
+ Item   4 -- Length:   24  Offset: 8048 (0x1f70)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table uuid (x uuid);
+insert into uuid values ('b4f0e2d6-429b-48bd-af06-6578829dd980'), ('00000000-0000-0000-0000-000000000000'), (null);
+\set relname uuid
+\ir run_test.sql
+\echo Testing :relname
+Testing uuid
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: uuid.heap
+* Options used: -D uuid
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      36 (0x0024)
+ Block: Size 8192  Version    4            Upper    8088 (0x1f98)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    3                      Free Space: 8052
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 36
+
+<Data> -----
+ Item   1 -- Length:   40  Offset: 8152 (0x1fd8)  Flags: NORMAL
+COPY: b4f0e2d6-429b-48bd-af06-6578829dd980
+ Item   2 -- Length:   40  Offset: 8112 (0x1fb0)  Flags: NORMAL
+COPY: 00000000-0000-0000-0000-000000000000
+ Item   3 -- Length:   24  Offset: 8088 (0x1f98)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table varchar (x varchar);
+insert into varchar values ('Hello World'), (''), (null);
+\set relname varchar
+\ir run_test.sql
+\echo Testing :relname
+Testing varchar
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: varchar.heap
+* Options used: -D varchar
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      36 (0x0024)
+ Block: Size 8192  Version    4            Upper    8096 (0x1fa0)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    3                      Free Space: 8060
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 36
+
+<Data> -----
+ Item   1 -- Length:   36  Offset: 8152 (0x1fd8)  Flags: NORMAL
+COPY: Hello World
+ Item   2 -- Length:   25  Offset: 8120 (0x1fb8)  Flags: NORMAL
+COPY: 
+ Item   3 -- Length:   24  Offset: 8096 (0x1fa0)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table "varcharN" (x varchar(11));
+insert into "varcharN" values ('Hello World'), (''), (null);
+\set relname varcharN
+\ir run_test.sql
+\echo Testing :relname
+Testing varcharN
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: varcharN.heap
+* Options used: -D varcharN
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      36 (0x0024)
+ Block: Size 8192  Version    4            Upper    8096 (0x1fa0)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    3                      Free Space: 8060
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 36
+
+<Data> -----
+ Item   1 -- Length:   36  Offset: 8152 (0x1fd8)  Flags: NORMAL
+COPY: Hello World
+ Item   2 -- Length:   25  Offset: 8120 (0x1fb8)  Flags: NORMAL
+COPY: 
+ Item   3 -- Length:   24  Offset: 8096 (0x1fa0)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table xid (x xid);
+insert into xid values ('-1'), ('0'), ('1'), (null);
+\set relname xid
+\ir run_test.sql
+\echo Testing :relname
+Testing xid
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: xid.heap
+* Options used: -D xid
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
+ Block: Size 8192  Version    4            Upper    8072 (0x1f88)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    4                      Free Space: 8032
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 40
+
+<Data> -----
+ Item   1 -- Length:   28  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: -1
+ Item   2 -- Length:   28  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: 0
+ Item   3 -- Length:   28  Offset: 8096 (0x1fa0)  Flags: NORMAL
+COPY: 1
+ Item   4 -- Length:   24  Offset: 8072 (0x1f88)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table xml (x xml);
+insert into xml values ('<xml></xml>'), (null);
+\set relname xml
+\ir run_test.sql
+\echo Testing :relname
+Testing xml
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: xml.heap
+* Options used: -D xml
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      32 (0x0020)
+ Block: Size 8192  Version    4            Upper    8128 (0x1fc0)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    2                      Free Space: 8096
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 32
+
+<Data> -----
+ Item   1 -- Length:   36  Offset: 8152 (0x1fd8)  Flags: NORMAL
+COPY: <xml></xml>
+ Item   2 -- Length:   24  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--

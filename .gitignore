@@ -1,4 +1,5 @@
 /*.bc
+/*.heap
 /*.o
 /pg_filedump
 /regression.*
