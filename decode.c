@@ -640,7 +640,7 @@ j2date(int jd, int *year, int *month, int *day)
 static int
 decode_smallint(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 {
-	const char *new_buffer = (const char *) TYPEALIGN(sizeof(int16), (uintptr_t) buffer);
+	const char *new_buffer = (const char *) SHORTALIGN(buffer);
 	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
 
 	if (buff_size < delta)
@@ -662,7 +662,7 @@ decode_smallint(const char *buffer, unsigned int buff_size, unsigned int *out_si
 static int
 decode_int(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 {
-	const char *new_buffer = (const char *) TYPEALIGN(sizeof(int32), (uintptr_t) buffer);
+	const char *new_buffer = (const char *) INTALIGN(buffer);
 	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
 
 	if (buff_size < delta)
@@ -683,7 +683,7 @@ decode_int(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 static int
 decode_bigint(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 {
-	const char *new_buffer = (const char *) TYPEALIGN(sizeof(int64), (uintptr_t) buffer);
+	const char *new_buffer = (const char *) LONGALIGN(buffer);
 	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
 
 	if (buff_size < delta)
@@ -704,7 +704,7 @@ decode_bigint(const char *buffer, unsigned int buff_size, unsigned int *out_size
 static int
 decode_time(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 {
-	const char *new_buffer = (const char *) TYPEALIGN(sizeof(int64), (uintptr_t) buffer);
+	const char *new_buffer = (const char *) LONGALIGN(buffer);
 	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
 	int64		timestamp,
 				timestamp_sec;
@@ -733,7 +733,7 @@ decode_time(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 static int
 decode_timetz(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 {
-	const char *new_buffer = (const char *) TYPEALIGN(sizeof(int64), (uintptr_t) buffer);
+	const char *new_buffer = (const char *) LONGALIGN(buffer);
 	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
 	int64		timestamp,
 				timestamp_sec;
@@ -766,7 +766,7 @@ decode_timetz(const char *buffer, unsigned int buff_size, unsigned int *out_size
 static int
 decode_date(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 {
-	const char *new_buffer = (const char *) TYPEALIGN(sizeof(int32), (uintptr_t) buffer);
+	const char *new_buffer = (const char *) INTALIGN(buffer);
 	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
 	int32		jd,
 				year,
@@ -796,7 +796,7 @@ decode_date(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 static int
 decode_timestamp(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 {
-	const char *new_buffer = (const char *) TYPEALIGN(sizeof(int64), (uintptr_t) buffer);
+	const char *new_buffer = (const char *) LONGALIGN(buffer);
 	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
 	int64		timestamp,
 				timestamp_sec;
@@ -846,7 +846,7 @@ decode_timestamp(const char *buffer, unsigned int buff_size, unsigned int *out_s
 static int
 decode_float4(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 {
-	const char *new_buffer = (const char *) TYPEALIGN(sizeof(float), (uintptr_t) buffer);
+	const char *new_buffer = (const char *) INTALIGN(buffer);
 	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
 
 	if (buff_size < delta)
@@ -867,7 +867,7 @@ decode_float4(const char *buffer, unsigned int buff_size, unsigned int *out_size
 static int
 decode_float8(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 {
-	const char *new_buffer = (const char *) TYPEALIGN(sizeof(double), (uintptr_t) buffer);
+	const char *new_buffer = (const char *) DOUBLEALIGN(buffer);
 	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
 
 	if (buff_size < delta)
@@ -907,7 +907,7 @@ static int
 decode_macaddr(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 {
 	unsigned char macaddr[6];
-	const char *new_buffer = (const char *) TYPEALIGN(sizeof(int32), (uintptr_t) buffer);
+	const char *new_buffer = (const char *) INTALIGN(buffer);
 	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
 
 	if (buff_size < delta)
@@ -943,20 +943,11 @@ decode_bool(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 static int
 decode_name(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 {
-	const char *new_buffer = (const char *) TYPEALIGN(sizeof(uint32), (uintptr_t) buffer);
-	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
-
-	if (buff_size < delta)
+	if (buff_size < NAMEDATALEN)
 		return -1;
 
-	buff_size -= delta;
-	buffer = new_buffer;
-
-	if (buff_size < NAMEDATALEN)
-		return -2;
-
 	CopyAppendEncode(buffer, strnlen(buffer, NAMEDATALEN));
-	*out_size = NAMEDATALEN + delta;
+	*out_size = NAMEDATALEN;
 	return 0;
 }
 
@@ -1365,8 +1356,7 @@ DecodeOidBinary(const char *buffer,
 		unsigned int *processed_size,
 		Oid *result)
 {
-	const char	   *new_buffer =
-		(const char*)TYPEALIGN(sizeof(Oid), (uintptr_t)buffer);
+	const char	   *new_buffer = (const char *) INTALIGN(buffer);
 	unsigned int	delta =
 		(unsigned int)((uintptr_t)new_buffer - (uintptr_t)buffer);
 

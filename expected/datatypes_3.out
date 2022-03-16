@@ -892,11 +892,11 @@ Block    0 ********************************************************
 
 <Data> -----
  Item   1 -- Length:   36  Offset: 8156 (0x1fdc)  Flags: NORMAL
-Error: unable to decode a tuple, callback #1 returned -2. Partial data: 
+COPY: 00:00:00.000000-00:00
  Item   2 -- Length:   36  Offset: 8120 (0x1fb8)  Flags: NORMAL
 COPY: 23:59:59.000000-00:00
  Item   3 -- Length:   36  Offset: 8084 (0x1f94)  Flags: NORMAL
-Error: unable to decode a tuple, callback #1 returned -2. Partial data: 
+COPY: 24:00:00.000000-00:00
  Item   4 -- Length:   24  Offset: 8060 (0x1f7c)  Flags: NORMAL
 COPY: \N
 
