@@ -1,0 +1,27 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  test:
+
+    strategy:
+      matrix:
+        pg:
+          - 15
+          - 14
+          # versions before 14 no not support Infinity in numeric
+          # versions before 12 have a different output format for floats (inf/Infinity, nan/NaN)
+
+    name: 🐘 PostgreSQL ${{ matrix.pg }}
+    runs-on: ubuntu-latest
+    container: pgxn/pgxn-tools
+
+    steps:
+      - name: Start PostgreSQL ${{ matrix.pg }}
+        run: pg-start ${{ matrix.pg }}
+      - name: Check out the repo
+        uses: actions/checkout@v2
+      - name: Install extra build dependencies
+        run: sudo apt-get install -y liblz4-dev
+      - name: Build and test on PostgreSQL ${{ matrix.pg }}
+        run: PATH=$PATH:/usr/lib/postgresql/${{ matrix.pg }}/bin pg-build-test
