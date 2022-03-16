@@ -24,7 +24,7 @@ insert into bool values (true), (false), (null);
 \set relname bool
 \ir run_test.sql
 
-create table char (x char);
+create table char (x "char");
 insert into char values ('x'), (null);
 \set relname char
 \ir run_test.sql

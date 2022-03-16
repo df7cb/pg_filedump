@@ -165,7 +165,7 @@ COPY: \N
 --
 ----------------------------------------------------------------------------------------------
 --
-create table char (x char);
+create table char (x "char");
 insert into char values ('x'), (null);
 \set relname char
 \ir run_test.sql
@@ -197,8 +197,8 @@ Block    0 ********************************************************
  Length (including item array): 32
 
 <Data> -----
- Item   1 -- Length:   26  Offset: 8160 (0x1fe0)  Flags: NORMAL
-Error: unable to decode a tuple, 1 bytes left, 0 expected. Partial data: 
+ Item   1 -- Length:   25  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: x
  Item   2 -- Length:   24  Offset: 8136 (0x1fc8)  Flags: NORMAL
 COPY: \N
 
