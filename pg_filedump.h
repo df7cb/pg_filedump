@@ -22,7 +22,7 @@
  * Original Author: Patrick Macdonald <patrickm@redhat.com>
  */
 
-#define FD_VERSION	"14.0"		/* version ID of pg_filedump */
+#define FD_VERSION	"14.1"		/* version ID of pg_filedump */
 #define FD_PG_VERSION	"PostgreSQL 8.x .. 14.x"		/* PG version it works with */
 
 #include "postgres.h"
