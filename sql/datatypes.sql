@@ -105,7 +105,7 @@ insert into timestamptz values ('2000-01-01 00:00'), ('100-01-01 BC 2:22'), ('in
 \ir run_test.sql
 
 create table timetz (x timetz);
-insert into timetz values ('00:00 Etc/UTC'), ('23:59:59 Etc/UTC'), ('23:59:60 Etc/UTC'), (null);
+insert into timetz values ('00:00 Etc/UTC'), ('23:59:59 Etc/UTC'), ('23:59:60 Etc/UTC'), ('1:23+4:56'), (null);
 \set relname timetz
 \ir run_test.sql
 

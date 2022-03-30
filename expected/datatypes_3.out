@@ -912,7 +912,7 @@ COPY: \N
 ----------------------------------------------------------------------------------------------
 --
 create table timetz (x timetz);
-insert into timetz values ('00:00 Etc/UTC'), ('23:59:59 Etc/UTC'), ('23:59:60 Etc/UTC'), (null);
+insert into timetz values ('00:00 Etc/UTC'), ('23:59:59 Etc/UTC'), ('23:59:60 Etc/UTC'), ('1:23+4:56'), (null);
 \set relname timetz
 \ir run_test.sql
 \echo Testing :relname
@@ -935,12 +935,12 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 
 Block    0 ********************************************************
 <Header> -----
- Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
- Block: Size 8192  Version    4            Upper    8060 (0x1f7c)
+ Block Offset: 0x00000000         Offsets: Lower      44 (0x002c)
+ Block: Size 8192  Version    4            Upper    8024 (0x1f58)
  LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
- Items:    4                      Free Space: 8020
+ Items:    5                      Free Space: 7980
  Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
- Length (including item array): 40
+ Length (including item array): 44
 
 <Data> -----
  Item   1 -- Length:   36  Offset: 8156 (0x1fdc)  Flags: NORMAL
@@ -949,7 +949,9 @@ COPY: 00:00:00.000000-00:00
 COPY: 23:59:59.000000-00:00
  Item   3 -- Length:   36  Offset: 8084 (0x1f94)  Flags: NORMAL
 COPY: 24:00:00.000000-00:00
- Item   4 -- Length:   24  Offset: 8060 (0x1f7c)  Flags: NORMAL
+ Item   4 -- Length:   36  Offset: 8048 (0x1f70)  Flags: NORMAL
+COPY: 01:23:00.000000+04:56
+ Item   5 -- Length:   24  Offset: 8024 (0x1f58)  Flags: NORMAL
 COPY: \N
 
 
