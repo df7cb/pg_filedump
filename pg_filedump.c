@@ -178,7 +178,7 @@ DisplayOptions(unsigned int validOptions)
 		 "      Supported types:\n"
 		 "        bigint bigserial bool char charN date float float4 float8 int\n"
 		 "        json macaddr name numeric oid real serial smallint smallserial text\n"
-		 "        time timestamp timetz uuid varchar varcharN xid xml\n"
+		 "        time timestamp timestamptz timetz uuid varchar varcharN xid xml\n"
 		 "      ~ ignores all attributes left in a tuple\n"
 		 "  -f  Display formatted block content dump along with interpretation\n"
 		 "  -h  Display this information\n"

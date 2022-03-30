@@ -79,7 +79,13 @@ static int
 decode_date(const char *buffer, unsigned int buff_size, unsigned int *out_size);
 
 static int
+decode_timestamp_internal(const char *buffer, unsigned int buff_size, unsigned int *out_size, bool with_timezone);
+
+static int
 decode_timestamp(const char *buffer, unsigned int buff_size, unsigned int *out_size);
+
+static int
+decode_timestamptz(const char *buffer, unsigned int buff_size, unsigned int *out_size);
 
 static int
 decode_float4(const char *buffer, unsigned int buff_size, unsigned int *out_size);
@@ -163,6 +169,9 @@ static ParseCallbackTableItem callback_table[] =
 	},
 	{
 		"timestamp", &decode_timestamp
+	},
+	{
+		"timestamptz", &decode_timestamptz
 	},
 	{
 		"real", &decode_float4
@@ -807,7 +816,7 @@ decode_date(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 
 /* Decode a timestamp type */
 static int
-decode_timestamp(const char *buffer, unsigned int buff_size, unsigned int *out_size)
+decode_timestamp_internal(const char *buffer, unsigned int buff_size, unsigned int *out_size, bool with_timezone)
 {
 	const char *new_buffer = (const char *) LONGALIGN(buffer);
 	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
@@ -857,13 +866,26 @@ decode_timestamp(const char *buffer, unsigned int buff_size, unsigned int *out_s
 	j2date(jd, &year, &month, &day);
 	timestamp_sec = timestamp / 1000000;
 
-	CopyAppendFmt("%04d-%02d-%02d %02" INT64_MODIFIER "d:%02" INT64_MODIFIER "d:%02" INT64_MODIFIER "d.%06" INT64_MODIFIER "d%s",
+	CopyAppendFmt("%04d-%02d-%02d %02" INT64_MODIFIER "d:%02" INT64_MODIFIER "d:%02" INT64_MODIFIER "d.%06" INT64_MODIFIER "d%s%s",
 				  (year <= 0) ? -year + 1 : year, month, day,
 				  timestamp_sec / 60 / 60, (timestamp_sec / 60) % 60, timestamp_sec % 60,
 				  timestamp % 1000000,
+				  with_timezone ? "+00" : "",
 				  (year <= 0) ? " BC" : "");
 
 	return 0;
+}
+
+static int
+decode_timestamp(const char *buffer, unsigned int buff_size, unsigned int *out_size)
+{
+	return decode_timestamp_internal(buffer, buff_size, out_size, false);
+}
+
+static int
+decode_timestamptz(const char *buffer, unsigned int buff_size, unsigned int *out_size)
+{
+	return decode_timestamp_internal(buffer, buff_size, out_size, true);
 }
 
 /* Decode a float4 type */
