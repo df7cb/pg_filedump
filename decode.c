@@ -768,7 +768,8 @@ decode_date(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 {
 	const char *new_buffer = (const char *) INTALIGN(buffer);
 	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
-	int32		jd,
+	int32		d,
+				jd,
 				year,
 				month,
 				day;
@@ -784,7 +785,19 @@ decode_date(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 
 	*out_size = sizeof(int32) + delta;
 
-	jd = *(int32 *) buffer + POSTGRES_EPOCH_JDATE;
+	d = *(int32 *) buffer;
+	if (d == PG_INT32_MIN)
+	{
+		CopyAppend("-infinity");
+		return 0;
+	}
+	if (d == PG_INT32_MAX)
+	{
+		CopyAppend("infinity");
+		return 0;
+	}
+
+	jd = d + POSTGRES_EPOCH_JDATE;
 	j2date(jd, &year, &month, &day);
 
 	CopyAppendFmt("%04d-%02d-%02d%s", (year <= 0) ? -year + 1 : year, month, day, (year <= 0) ? " BC" : "");
@@ -816,6 +829,17 @@ decode_timestamp(const char *buffer, unsigned int buff_size, unsigned int *out_s
 
 	*out_size = sizeof(int64) + delta;
 	timestamp = *(int64 *) buffer;
+
+	if (timestamp == DT_NOBEGIN)
+	{
+		CopyAppend("-infinity");
+		return 0;
+	}
+	if (timestamp == DT_NOEND)
+	{
+		CopyAppend("infinity");
+		return 0;
+	}
 
 	jd = timestamp / USECS_PER_DAY;
 	if (jd != 0)

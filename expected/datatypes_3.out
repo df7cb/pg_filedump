@@ -252,7 +252,7 @@ COPY: \N
 ----------------------------------------------------------------------------------------------
 --
 create table date (x date);
-insert into date values ('2000-01-01'), ('1900-02-02'), ('2100-12-31'), ('infinity'), ('-infinity'), (null);
+insert into date values ('2000-01-01'), ('1900-02-02'), ('2100-12-31'), ('100-01-01 BC'), ('-infinity'), ('infinity'), (null);
 \set relname date
 \ir run_test.sql
 \echo Testing :relname
@@ -275,12 +275,12 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 
 Block    0 ********************************************************
 <Header> -----
- Block Offset: 0x00000000         Offsets: Lower      48 (0x0030)
- Block: Size 8192  Version    4            Upper    8028 (0x1f5c)
+ Block Offset: 0x00000000         Offsets: Lower      52 (0x0034)
+ Block: Size 8192  Version    4            Upper    8000 (0x1f40)
  LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
- Items:    6                      Free Space: 7980
+ Items:    7                      Free Space: 7948
  Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
- Length (including item array): 48
+ Length (including item array): 52
 
 <Data> -----
  Item   1 -- Length:   28  Offset: 8164 (0x1fe4)  Flags: NORMAL
@@ -290,10 +290,12 @@ COPY: 1900-02-02
  Item   3 -- Length:   28  Offset: 8108 (0x1fac)  Flags: NORMAL
 COPY: 2100-12-31
  Item   4 -- Length:   28  Offset: 8080 (0x1f90)  Flags: NORMAL
-COPY: 5881610-07-11
+COPY: 0100-01-01 BC
  Item   5 -- Length:   28  Offset: 8052 (0x1f74)  Flags: NORMAL
-COPY: 5881610-07-12
- Item   6 -- Length:   24  Offset: 8028 (0x1f5c)  Flags: NORMAL
+COPY: -infinity
+ Item   6 -- Length:   28  Offset: 8024 (0x1f58)  Flags: NORMAL
+COPY: infinity
+ Item   7 -- Length:   24  Offset: 8000 (0x1f40)  Flags: NORMAL
 COPY: \N
 
 
@@ -814,7 +816,7 @@ COPY: \N
 ----------------------------------------------------------------------------------------------
 --
 create table timestamp (x timestamp);
-insert into timestamp values ('2000-01-01 00:00'), ('infinity'), ('-infinity'), (null);
+insert into timestamp values ('2000-01-01 00:00'), ('100-01-01 BC 2:22'), ('infinity'), ('-infinity'), (null);
 \set relname timestamp
 \ir run_test.sql
 \echo Testing :relname
@@ -837,21 +839,23 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 
 Block    0 ********************************************************
 <Header> -----
- Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
- Block: Size 8192  Version    4            Upper    8072 (0x1f88)
+ Block Offset: 0x00000000         Offsets: Lower      44 (0x002c)
+ Block: Size 8192  Version    4            Upper    8040 (0x1f68)
  LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
- Items:    4                      Free Space: 8032
+ Items:    5                      Free Space: 7996
  Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
- Length (including item array): 40
+ Length (including item array): 44
 
 <Data> -----
  Item   1 -- Length:   32  Offset: 8160 (0x1fe0)  Flags: NORMAL
 COPY: 2000-01-01 00:00:00.000000
  Item   2 -- Length:   32  Offset: 8128 (0x1fc0)  Flags: NORMAL
-COPY: 294277-01-09 04:00:54.775807
+COPY: 0100-01-01 02:22:00.000000 BC
  Item   3 -- Length:   32  Offset: 8096 (0x1fa0)  Flags: NORMAL
-COPY: 11468944-01-11 19:59:05.224192
- Item   4 -- Length:   24  Offset: 8072 (0x1f88)  Flags: NORMAL
+COPY: infinity
+ Item   4 -- Length:   32  Offset: 8064 (0x1f80)  Flags: NORMAL
+COPY: -infinity
+ Item   5 -- Length:   24  Offset: 8040 (0x1f68)  Flags: NORMAL
 COPY: \N
 
 

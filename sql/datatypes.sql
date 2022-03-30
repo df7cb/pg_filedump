@@ -35,7 +35,7 @@ insert into "charN" values ('x'), ('xxxxx'), (null);
 \ir run_test.sql
 
 create table date (x date);
-insert into date values ('2000-01-01'), ('1900-02-02'), ('2100-12-31'), ('infinity'), ('-infinity'), (null);
+insert into date values ('2000-01-01'), ('1900-02-02'), ('2100-12-31'), ('100-01-01 BC'), ('-infinity'), ('infinity'), (null);
 \set relname date
 \ir run_test.sql
 
@@ -95,7 +95,7 @@ insert into time values ('00:00'), ('23:59:59'), ('23:59:60'), (null);
 \ir run_test.sql
 
 create table timestamp (x timestamp);
-insert into timestamp values ('2000-01-01 00:00'), ('infinity'), ('-infinity'), (null);
+insert into timestamp values ('2000-01-01 00:00'), ('100-01-01 BC 2:22'), ('infinity'), ('-infinity'), (null);
 \set relname timestamp
 \ir run_test.sql
 
