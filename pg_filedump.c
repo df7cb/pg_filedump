@@ -1526,7 +1526,7 @@ FormatSpecial(char *buffer)
 			{
 				HashPageOpaque hashSection = (HashPageOpaque) (buffer + specialOffset);
 
-				if (hashSection->hasho_flag & LH_UNUSED_PAGE)
+				if ((hashSection->hasho_flag & LH_PAGE_TYPE) == LH_UNUSED_PAGE)
 					strcat(flagString, "UNUSED|");
 				if (hashSection->hasho_flag & LH_OVERFLOW_PAGE)
 					strcat(flagString, "OVERFLOW|");
