@@ -1351,8 +1351,7 @@ ReadStringFromToast(const char *buffer,
 					toast_relation_filename);
 			result = -1;
 		}
-
-		if (result == 0)
+		else
 		{
 			unsigned int toast_relation_block_size = GetBlockSize(toast_rel_fp);
 			fseek(toast_rel_fp, 0, SEEK_SET);
@@ -1382,9 +1381,9 @@ ReadStringFromToast(const char *buffer,
 			}
 
 			free(toast_data);
+			fclose(toast_rel_fp);
 		}
 
-		fclose(toast_rel_fp);
 		free(toast_relation_path);
 	}
 	/* If tag is indirect or expanded, it was stored in memory. */
