@@ -1502,6 +1502,10 @@ FormatSpecial(char *buffer)
 					strcat(flagString, "HASGARBAGE|");
 				if (btreeSection->btpo_flags & BTP_INCOMPLETE_SPLIT)
 					strcat(flagString, "INCOMPLETESPLIT|");
+#if PG_VERSION_NUM >= 140000
+				if (btreeSection->btpo_flags & BTP_HAS_FULLXID)
+					strcat(flagString, "HASFULLXID|");
+#endif
 				if (strlen(flagString))
 					flagString[strlen(flagString) - 1] = '\0';
 
@@ -1536,6 +1540,14 @@ FormatSpecial(char *buffer)
 					strcat(flagString, "BITMAP|");
 				if (hashSection->hasho_flag & LH_META_PAGE)
 					strcat(flagString, "META|");
+				if (hashSection->hasho_flag & LH_BUCKET_BEING_POPULATED)
+					strcat(flagString, "BUCKET_BEING_POPULATED|");
+				if (hashSection->hasho_flag & LH_BUCKET_BEING_SPLIT)
+					strcat(flagString, "BUCKET_BEING_SPLIT|");
+				if (hashSection->hasho_flag & LH_BUCKET_NEEDS_SPLIT_CLEANUP)
+					strcat(flagString, "BUCKET_NEEDS_SPLIT_CLEANUP|");
+				if (hashSection->hasho_flag & LH_PAGE_HAS_DEAD_TUPLES)
+					strcat(flagString, "PAGE_HAS_DEAD_TUPLES|");
 				if (strlen(flagString))
 					flagString[strlen(flagString) - 1] = '\0';
 				printf(" Hash Index Section:\n"
@@ -1561,6 +1573,8 @@ FormatSpecial(char *buffer)
 					strcat(flagString, "TUPLES_DELETED|");
 				if (gistSection->flags & F_FOLLOW_RIGHT)
 					strcat(flagString, "FOLLOW_RIGHT|");
+				if (gistSection->flags & F_HAS_GARBAGE)
+					strcat(flagString, "HAS_GARBAGE|");
 				if (strlen(flagString))
 					flagString[strlen(flagString) - 1] = '\0';
 				printf(" GIST Index Section:\n"
