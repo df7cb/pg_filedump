@@ -1270,6 +1270,7 @@ static int DumpCompressedString(const char *data, int32 compressed_size, int (*p
 #else
 			printf("Error: compression method lz4 not supported.\n");
 			printf("Try to rebuild pg_filedump for PostgreSQL server of version 14+ with --with-lz4 option.\n");
+			free(decompress_tmp_buff);
 			return -2;
 #endif
 		default:
