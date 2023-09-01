@@ -75,7 +75,11 @@ appendStringInfoString(StringInfo str, const char *s)
  * if necessary.
  */
 void
+#if PG_VERSION_NUM < 160000
 appendBinaryStringInfo(StringInfo str, const char *data, int datalen)
+#else
+appendBinaryStringInfo(StringInfo str, const void *data, int datalen)
+#endif
 {
 	assert(str != NULL);
 
