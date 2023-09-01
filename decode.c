@@ -244,6 +244,7 @@ static bool copyStringInitDone = false;
 static char decompress_tmp_buff[64 * 1024];
 
 /* Used by some PostgreSQL macro definitions */
+#if PG_VERSION_NUM < 160000
 void
 ExceptionalCondition(const char *conditionName,
 					 const char *errorType,
@@ -257,6 +258,19 @@ ExceptionalCondition(const char *conditionName,
 		   lineNumber);
 	exit(1);
 }
+#else
+void
+ExceptionalCondition(const char *conditionName,
+					 const char *fileName,
+					 int lineNumber)
+{
+	printf("Exceptional condition: name = %s, type = FailedAssertion, fname = %s, line = %d\n",
+		   conditionName ? conditionName : "(NULL)",
+		   fileName ? fileName : "(NULL)",
+		   lineNumber);
+	exit(1);
+}
+#endif
 
 /* Append given string to current COPY line */
 static void

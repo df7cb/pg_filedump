@@ -681,7 +681,7 @@ GetBlockSize(FILE *fp)
 	rewind(fp);
 
 	if (bytesRead == sizeof(PageHeaderData))
-		localSize = (unsigned int) PageGetPageSize(&localCache);
+		localSize = (unsigned int) PageGetPageSize(localCache);
 	else
 	{
 		printf("Error: Unable to read full page header from block 0.\n"
