@@ -516,7 +516,7 @@ Block    0 ********************************************************
 
 <Data> -----
  Item   1 -- Length:   28  Offset: 8164 (0x1fe4)  Flags: NORMAL
-COPY: -1
+COPY: 4294967295
  Item   2 -- Length:   28  Offset: 8136 (0x1fc8)  Flags: NORMAL
 COPY: 0
  Item   3 -- Length:   28  Offset: 8108 (0x1fac)  Flags: NORMAL
@@ -972,7 +972,7 @@ Block    0 ********************************************************
 
 <Data> -----
  Item   1 -- Length:   28  Offset: 8164 (0x1fe4)  Flags: NORMAL
-COPY: -1
+COPY: 4294967295
  Item   2 -- Length:   28  Offset: 8136 (0x1fc8)  Flags: NORMAL
 COPY: 0
  Item   3 -- Length:   28  Offset: 8108 (0x1fac)  Flags: NORMAL
