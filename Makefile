@@ -5,7 +5,7 @@ FD_VERSION=14.1
 
 PROGRAM = pg_filedump
 OBJS = pg_filedump.o decode.o stringinfo.o
-REGRESS = datatypes float numeric
+REGRESS = datatypes float numeric xml
 EXTRA_CLEAN = *.heap
 
 PG_CONFIG = pg_config

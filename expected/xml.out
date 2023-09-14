@@ -1,0 +1,46 @@
+-- 64 bit output in *.out, 32 bit output in *_3.out
+-- server without --with-libxml support output in *_1.out
+select oid as datoid from pg_database where datname = current_database() \gset
+----------------------------------------------------------------------------------------------
+create table xml (x xml);
+insert into xml values ('<xml></xml>'), (null);
+\set relname xml
+\ir run_test.sql
+\echo Testing :relname
+Testing xml
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: xml.heap
+* Options used: -D xml
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      32 (0x0020)
+ Block: Size 8192  Version    4            Upper    8128 (0x1fc0)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    2                      Free Space: 8096
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 32
+
+<Data> -----
+ Item   1 -- Length:   36  Offset: 8152 (0x1fd8)  Flags: NORMAL
+COPY: <xml></xml>
+ Item   2 -- Length:   24  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--

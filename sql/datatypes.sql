@@ -113,8 +113,3 @@ create table xid (x xid);
 insert into xid values ('-1'), ('0'), ('1'), (null);
 \set relname xid
 \ir run_test.sql
-
-create table xml (x xml);
-insert into xml values ('<xml></xml>'), (null);
-\set relname xml
-\ir run_test.sql

@@ -1,0 +1,38 @@
+-- 64 bit output in *.out, 32 bit output in *_3.out
+-- server without --with-libxml support output in *_1.out
+select oid as datoid from pg_database where datname = current_database() \gset
+----------------------------------------------------------------------------------------------
+create table xml (x xml);
+insert into xml values ('<xml></xml>'), (null);
+ERROR:  unsupported XML feature
+LINE 1: insert into xml values ('<xml></xml>'), (null);
+                                ^
+DETAIL:  This functionality requires the server to be built with libxml support.
+HINT:  You need to rebuild PostgreSQL using --with-libxml.
+\set relname xml
+\ir run_test.sql
+\echo Testing :relname
+Testing xml
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: xml.heap
+* Options used: -D xml
+*******************************************************************
+Error: Unable to read full page header from block 0.
+  ===> Read 0 bytes
+Notice: Block size determined from reading block 0 is zero, using default 8192 instead.
+Hint: Use -S <size> to specify the size manually.
+Error: Premature end of file encountered.
+--
+----------------------------------------------------------------------------------------------
+--
