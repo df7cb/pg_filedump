@@ -11,6 +11,8 @@ jobs:
           - 15
           - 14
           # versions before 14 no not support Infinity in numeric
+          - 13
+          - 12
           # versions before 12 have a different output format for floats (inf/Infinity, nan/NaN)
 
     name: 🐘 PostgreSQL ${{ matrix.pg }}

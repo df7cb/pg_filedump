@@ -69,11 +69,6 @@ insert into name values ('name'), ('12345678901234567890123456789012345678901234
 \set relname name
 \ir run_test.sql
 
-create table numeric (x numeric);
-insert into numeric values (0), ('12341234'), ('-567890'), ('-Infinity'), ('Infinity'), ('NaN'), (null);
-\set relname numeric
-\ir run_test.sql
-
 create table oid (x oid);
 insert into oid values (-1), (0), (1), (null);
 \set relname oid

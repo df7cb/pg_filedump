@@ -1,0 +1,56 @@
+-- 64 bit output in *.out, 32 bit output in *_3.out
+-- PG14+ output in *.out/*_3.out, earlier in *_1.out/*_4.out
+select oid as datoid from pg_database where datname = current_database() \gset
+----------------------------------------------------------------------------------------------
+create table numeric (x numeric);
+insert into numeric values (0), ('12341234'), ('-567890'), ('NaN'), (null);
+insert into numeric values ('-Infinity'), ('Infinity'); -- needs PG 14
+ERROR:  invalid input syntax for type numeric: "-Infinity"
+LINE 1: insert into numeric values ('-Infinity'), ('Infinity');
+                                    ^
+\set relname numeric
+\ir run_test.sql
+\echo Testing :relname
+Testing numeric
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: numeric.heap
+* Options used: -D numeric
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      44 (0x002c)
+ Block: Size 8192  Version    4            Upper    8048 (0x1f70)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    5                      Free Space: 8004
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 44
+
+<Data> -----
+ Item   1 -- Length:   27  Offset: 8164 (0x1fe4)  Flags: NORMAL
+COPY: 0
+ Item   2 -- Length:   31  Offset: 8132 (0x1fc4)  Flags: NORMAL
+COPY: 12341234
+ Item   3 -- Length:   31  Offset: 8100 (0x1fa4)  Flags: NORMAL
+COPY: -567890
+ Item   4 -- Length:   27  Offset: 8072 (0x1f88)  Flags: NORMAL
+COPY: NaN
+ Item   5 -- Length:   24  Offset: 8048 (0x1f70)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
