@@ -1,0 +1,104 @@
+-- 64 bit output in *.out, 32 bit output in *_3.out
+-- PG12+ output in *.out/*_3.out, earlier in *_1.out/*_4.out
+select oid as datoid from pg_database where datname = current_database() \gset
+----------------------------------------------------------------------------------------------
+create table float4 (x float4);
+insert into float4 values (0), ('-0'), ('-infinity'), ('infinity'), ('NaN'), (null);
+\set relname float4
+\ir run_test.sql
+\echo Testing :relname
+Testing float4
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: float4.heap
+* Options used: -D float4
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      48 (0x0030)
+ Block: Size 8192  Version    4            Upper    8008 (0x1f48)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    6                      Free Space: 7960
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 48
+
+<Data> -----
+ Item   1 -- Length:   28  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: 0.000000000000
+ Item   2 -- Length:   28  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: -0.000000000000
+ Item   3 -- Length:   28  Offset: 8096 (0x1fa0)  Flags: NORMAL
+COPY: -inf
+ Item   4 -- Length:   28  Offset: 8064 (0x1f80)  Flags: NORMAL
+COPY: inf
+ Item   5 -- Length:   28  Offset: 8032 (0x1f60)  Flags: NORMAL
+COPY: nan
+ Item   6 -- Length:   24  Offset: 8008 (0x1f48)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--
+create table float8 (x float8);
+insert into float8 values (0), ('-0'), ('-infinity'), ('infinity'), ('NaN'), (null);
+\set relname float8
+\ir run_test.sql
+\echo Testing :relname
+Testing float8
+vacuum :"relname";
+checkpoint;
+select relfilenode from pg_class where relname = :'relname' \gset
+select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
+\set output :relname '.heap'
+\lo_export :oid :output
+\setenv relname :relname
+\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+
+*******************************************************************
+* PostgreSQL File/Block Formatted Dump Utility
+*
+* File: float8.heap
+* Options used: -D float8
+*******************************************************************
+
+Block    0 ********************************************************
+<Header> -----
+ Block Offset: 0x00000000         Offsets: Lower      48 (0x0030)
+ Block: Size 8192  Version    4            Upper    8008 (0x1f48)
+ LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ Items:    6                      Free Space: 7960
+ Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Length (including item array): 48
+
+<Data> -----
+ Item   1 -- Length:   32  Offset: 8160 (0x1fe0)  Flags: NORMAL
+COPY: 0.000000000000
+ Item   2 -- Length:   32  Offset: 8128 (0x1fc0)  Flags: NORMAL
+COPY: -0.000000000000
+ Item   3 -- Length:   32  Offset: 8096 (0x1fa0)  Flags: NORMAL
+COPY: -inf
+ Item   4 -- Length:   32  Offset: 8064 (0x1f80)  Flags: NORMAL
+COPY: inf
+ Item   5 -- Length:   32  Offset: 8032 (0x1f60)  Flags: NORMAL
+COPY: nan
+ Item   6 -- Length:   24  Offset: 8008 (0x1f48)  Flags: NORMAL
+COPY: \N
+
+
+*** End of File Encountered. Last Block Read: 0 ***
+--
+----------------------------------------------------------------------------------------------
+--

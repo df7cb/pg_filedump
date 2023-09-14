@@ -39,16 +39,6 @@ insert into date values ('2000-01-01'), ('1900-02-02'), ('2100-12-31'), ('100-01
 \set relname date
 \ir run_test.sql
 
-create table float4 (x float4);
-insert into float4 values (0), ('-0'), ('-infinity'), ('infinity'), ('NaN'), (null);
-\set relname float4
-\ir run_test.sql
-
-create table float8 (x float8);
-insert into float8 values (0), ('-0'), ('-infinity'), ('infinity'), ('NaN'), (null);
-\set relname float8
-\ir run_test.sql
-
 create table int (x int);
 insert into int values (-1), (0), (1), (null);
 \set relname int

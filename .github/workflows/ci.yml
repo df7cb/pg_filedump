@@ -14,6 +14,8 @@ jobs:
           - 13
           - 12
           # versions before 12 have a different output format for floats (inf/Infinity, nan/NaN)
+          - 11
+          - 10
 
     name: 🐘 PostgreSQL ${{ matrix.pg }}
     runs-on: ubuntu-latest
@@ -23,7 +25,7 @@ jobs:
       - name: Start PostgreSQL ${{ matrix.pg }}
         run: pg-start ${{ matrix.pg }}
       - name: Check out the repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install extra build dependencies
         run: sudo apt-get install -y liblz4-dev
       - name: Build and test on PostgreSQL ${{ matrix.pg }}
