@@ -19,7 +19,7 @@ else
        LIBS = $(libpq_pgport)
 endif
 
-DISTFILES= README.pg_filedump.md Makefile Makefile.contrib \
+DISTFILES= README.pg_filedump.md Makefile \
 	pg_filedump.h pg_filedump.c decode.h decode.c stringinfo.c
 
 dist:
