@@ -697,7 +697,7 @@ decode_int(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 	if (buff_size < sizeof(int32))
 		return -2;
 
-	CopyAppendFmt("%d", *(int32 *) buffer);
+	CopyAppendFmt("%u", *(uint32 *) buffer);
 	*out_size = sizeof(int32) + delta;
 	return 0;
 }
