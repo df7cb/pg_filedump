@@ -1,8 +1,8 @@
-pg_filedump - Display formatted contents of a PostgreSQL heap, index,
-              or control file.
+# pg_filedump - Display formatted contents of a PostgreSQL heap, index, or control file
 
 Copyright (c) 2002-2010 Red Hat, Inc.
-Copyright (c) 2011-2022, PostgreSQL Global Development Group
+
+Copyright (c) 2011-2023, PostgreSQL Global Development Group
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -12,8 +12,7 @@ the Free Software Foundation; either version 2 of the License, or
 Original Author: Patrick Macdonald <patrickm@redhat.com>
 
 
-------------------------------------------------------------------------
-Overview:
+## Overview:
 
 pg_filedump is a utility to format PostgreSQL heap/index/control files
 into a human-readable form.  You can format/dump the files several ways,
@@ -32,36 +31,26 @@ example, block size.  It's there because if the header of block 0 is
 corrupt, you need a method of forcing a block size.
 
 
-------------------------------------------------------------------------
-Compile/Installation:
+## Compile/Installation:
 
 To compile pg_filedump, you will need to have a properly configured
-PostgreSQL source tree or complete install tree (with include files)
+PostgreSQL source tree or the devel packages (with include files)
 of the appropriate PostgreSQL major version.
 
-There are two makefiles included in this package.  Makefile is a standalone
-makefile for pg_filedump.  Makefile.contrib can be used if this package
-was untarred in the contrib directory of a PostgreSQL build tree.
-
-  make
-  make install
-
-It is also possible to use Makefile.contrib without being in the contrib
-directory:
-
-  make -f Makefile.contrib USE_PGXS=1
-
-Both methods require that the pg_config program be in your PATH, but should
-not require any manual adjustments of the Makefile.
+```
+make PG_CONFIG=/path/to/postgresql/bin/pg_config
+make install PG_CONFIG=/path/to/postgresql/bin/pg_config
+```
 
 
-------------------------------------------------------------------------
-Invocation:
+## Invocation:
 
-pg_filedump [-abcdfhikxy] [-R startblock [endblock]] [-D attrlist] [-S blocksize] [-s segsize] [-n segnumber] file
+```
+Usage: pg_filedump [-abcdfhikxy] [-R startblock [endblock]] [-D attrlist] [-S blocksize] [-s segsize] [-n segnumber] file
 
-Defaults are: relative addressing, range of the entire file, block size
-              as listed on block 0 in the file
+Display formatted contents of a PostgreSQL heap/index/control file
+Defaults are: relative addressing, range of the entire file, block
+               size as listed on block 0 in the file
 
 The following options are valid for heap and index files:
   -a  Display absolute addresses when formatting (Block header
@@ -70,47 +59,25 @@ The following options are valid for heap and index files:
       off all formatting options)
   -d  Display formatted block content dump (Option will turn off
       all other formatting options)
-  -D  Decode tuples using given comma separated list of types.
-      List of supported types:
-        * bigint
-        * bigserial
-        * bool
-        * char
-        * charN     -- char(n)
-        * date
-        * float
-        * float4
-        * float8
-        * int
-        * json
-        * macaddr
-        * name
-        * numeric
-        * oid
-        * real
-        * serial
-        * smallint
-        * smallserial
-        * text
-        * time
-        * timestamp
-        * timetz
-        * uuid
-        * varchar
-        * varcharN -- varchar(n)
-        * xid
-        * xml
-        * ~        -- ignores all attributes left in a tuple
+  -D  Decode tuples using given comma separated list of types
+      Supported types:
+        bigint bigserial bool char charN date float float4 float8 int
+        json macaddr name numeric oid real serial smallint smallserial text
+        time timestamp timestamptz timetz uuid varchar varcharN xid xml
+      ~ ignores all attributes left in a tuple
   -f  Display formatted block content dump along with interpretation
   -h  Display this information
   -i  Display interpreted item details
   -k  Verify block checksums
+  -o  Do not dump old values.
   -R  Display specific block ranges within the file (Blocks are
       indexed from 0)
         [startblock]: block to start at
         [endblock]: block to end at
       A startblock without an endblock will format the single block
   -s  Force segment size to [segsize]
+  -t  Dump TOAST files
+  -v  Ouput additional information about TOAST relations
   -n  Force segment number to [segnumber]
   -S  Force block size to [blocksize]
   -x  Force interpreted formatting of block items as index items
@@ -120,10 +87,12 @@ The following options are valid for control files:
   -c  Interpret the file listed as a control file
   -f  Display formatted content dump along with interpretation
   -S  Force block size to [blocksize]
-
 Additional functions:
-	-m  Interpret file as pg_filenode.map file and print contents
-      (all other options will be ignored)
+  -m  Interpret file as pg_filenode.map file and print contents (all
+      other options will be ignored)
+
+Report bugs to <pgsql-bugs@postgresql.org>
+```
 
 In most cases it's recommended to use the -i and -f options to get
 the most useful dump output.
