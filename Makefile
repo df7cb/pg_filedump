@@ -8,7 +8,7 @@ OBJS = pg_filedump.o decode.o stringinfo.o
 REGRESS = datatypes float numeric xml
 EXTRA_CLEAN = *.heap
 
-PG_CONFIG = pg_config
+PG_CONFIG ?= pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
 
