@@ -9,7 +9,7 @@ REGRESS = datatypes float numeric xml
 TAP_TESTS = 1
 EXTRA_CLEAN = *.heap
 
-PG_CONFIG = pg_config
+PG_CONFIG ?= pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
 
