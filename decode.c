@@ -400,7 +400,7 @@ CopyAppendNumeric(const char *buffer, int num_size)
 
 	if (NUMERIC_IS_SPECIAL(num))
 	{
-		int	result = -2;
+		int result = -2;
 
 		if (NUMERIC_IS_NINF(num))
 		{
