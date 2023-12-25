@@ -127,6 +127,8 @@ static void FormatBlock(unsigned int blockOptions,
 		unsigned int *toastRead);
 static unsigned int GetSpecialSectionType(char *buffer, Page page);
 static bool IsBtreeMetaPage(Page page);
+static bool IsGinMetaPage(Page page);
+static bool IsSpGistMetaPage(Page page);
 static void CreateDumpFileHeader(int numOptions, char **options);
 static int	FormatHeader(char *buffer,
 		Page page,
@@ -809,6 +811,39 @@ IsBtreeMetaPage(Page page)
 	return false;
 }
 
+/*	Check whether page is a gin meta page */
+static bool
+IsGinMetaPage(Page page)
+{
+	if ((PageGetSpecialSize(page) == (MAXALIGN(sizeof(GinPageOpaqueData))))
+		&& (bytesToFormat == blockSize))
+	{
+		GinPageOpaque gpo = GinPageGetOpaque(page);
+
+		if (gpo->flags & GIN_META)
+			return true;
+	}
+
+	return false;
+}
+
+/*	Check whether page is a spgist meta page */
+static bool
+IsSpGistMetaPage(Page page)
+{
+	if ((PageGetSpecialSize(page) == (MAXALIGN(sizeof(SpGistPageOpaqueData))))
+		&& (bytesToFormat == blockSize))
+	{
+		SpGistPageOpaque spgpo = SpGistPageGetOpaque(page);
+
+		if ((spgpo->spgist_page_id == SPGIST_PAGE_ID) &&
+			(spgpo->flags & SPGIST_META))
+			return true;
+	}
+
+	return false;
+}
+
 /* Display a header for the dump so we know the file name, the options
  * used and the time the dump was taken */
 static void
@@ -927,6 +962,48 @@ FormatHeader(char *buffer, Page page, BlockNumber blkno, bool isToast)
 			}
 			headerBytes += sizeof(BTMetaPageData);
 		}
+		else if (IsSpGistMetaPage(page))
+		{
+			SpGistMetaPageData *spgpMeta = SpGistPageGetMeta(buffer);
+
+			if (!isToast || verbose)
+			{
+				int i;
+
+				printf("%s SpGist Meta Data:  Magic (0x%08x)\n",
+						indent, spgpMeta->magicNumber);
+				printf("%s                    CachedPages (%d):\n",
+						indent, SPGIST_CACHED_PAGES);
+				for (i = 0; i < SPGIST_CACHED_PAGES; i++)
+				{
+					printf("%s                        Block (%u) FreeSpace (%d)\n",
+							indent, spgpMeta->lastUsedPages.cachedPage[i].blkno,
+							spgpMeta->lastUsedPages.cachedPage[i].freeSpace);
+				}
+				printf("\n");
+			}
+
+			headerBytes += sizeof(SpGistMetaPageData);
+		}
+		else if (IsGinMetaPage(page))
+		{
+			GinMetaPageData *gpMeta = GinPageGetMeta(buffer);
+
+			if (!isToast || verbose)
+			{
+				printf("%s Gin Meta Data:  Head (%u) Tail (%u) TailFreeSize (%u)\n",
+						indent, gpMeta->head, gpMeta->tail, gpMeta->tailFreeSize);
+				printf("%s                 PendingPages (%u) PendingHeapTuples(%lld)\n",
+						indent, gpMeta->nPendingPages, (long long int) gpMeta->nPendingHeapTuples);
+				printf("%s                 TotalPages (%u) EntryPages (%u) DataPages (%u) Entries (%lld)\n",
+						indent, gpMeta->nTotalPages, gpMeta->nEntryPages,
+						gpMeta->nDataPages, (long long int) gpMeta->nEntries);
+				printf("%s                 GinVersion (%d)\n\n",
+						indent, gpMeta->ginVersion);
+			}
+
+			headerBytes += sizeof(GinMetaPageData);
+		}
 
 		/* Eye the contents of the header and alert the user to possible 
 		 * problems. */
@@ -1001,6 +1078,14 @@ FormatItemBlock(char *buffer,
 	/* If it's a btree meta page, the meta block is where items would normally
 	 * be; don't print garbage. */
 	if (IsBtreeMetaPage(page))
+		return;
+
+	/* Same as above */
+	if (IsSpGistMetaPage(page))
+		return;
+
+	/* Same as above */
+	if (IsGinMetaPage(page))
 		return;
 
 	if (!isToast || verbose)
