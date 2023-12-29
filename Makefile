@@ -6,6 +6,7 @@ FD_VERSION=16.0
 PROGRAM = pg_filedump
 OBJS = pg_filedump.o decode.o stringinfo.o
 REGRESS = datatypes float numeric xml
+TAP_TESTS = 1
 EXTRA_CLEAN = *.heap
 
 PG_CONFIG = pg_config
