@@ -809,6 +809,55 @@ IsBtreeMetaPage(Page page)
 	return false;
 }
 
+/*	Check whether page is a gin meta page */
+static bool
+IsGinMetaPage(Page page)
+{
+	if ((PageGetSpecialSize(page) == (MAXALIGN(sizeof(GinPageOpaqueData))))
+		&& (bytesToFormat == blockSize))
+	{
+		GinPageOpaque gpo = GinPageGetOpaque(page);
+
+		if (gpo->flags & GIN_META)
+			return true;
+	}
+
+	return false;
+}
+
+/*	Check whether page is a gin leaf page */
+static bool
+IsGinLeafPage(Page page)
+{
+	if ((PageGetSpecialSize(page) == (MAXALIGN(sizeof(GinPageOpaqueData))))
+		&& (bytesToFormat == blockSize))
+	{
+		GinPageOpaque gpo = GinPageGetOpaque(page);
+
+		if (gpo->flags & GIN_LEAF)
+			return true;
+	}
+
+	return false;
+}
+
+/* Check whether page is a SpGist meta page */
+static bool
+IsSpGistMetaPage(Page page)
+{
+	if ((PageGetSpecialSize(page) == (MAXALIGN(sizeof(SpGistPageOpaqueData))))
+		&& (bytesToFormat == blockSize))
+	{
+		SpGistPageOpaque spgpo = SpGistPageGetOpaque(page);
+
+		if ((spgpo->spgist_page_id == SPGIST_PAGE_ID) &&
+			(spgpo->flags & SPGIST_META))
+			return true;
+	}
+
+	return false;
+}
+
 /* Display a header for the dump so we know the file name, the options
  * used and the time the dump was taken */
 static void
@@ -980,6 +1029,185 @@ FormatHeader(char *buffer, Page page, BlockNumber blkno, bool isToast)
 	return (rc);
 }
 
+/* Copied from ginpostinglist.c */
+#define MaxHeapTuplesPerPageBits	11
+static uint64
+itemptr_to_uint64(const ItemPointer iptr)
+{
+	uint64		val;
+
+	val = GinItemPointerGetBlockNumber(iptr);
+	val <<= MaxHeapTuplesPerPageBits;
+	val |= GinItemPointerGetOffsetNumber(iptr);
+
+	return val;
+}
+
+static void
+uint64_to_itemptr(uint64 val, ItemPointer iptr)
+{
+	GinItemPointerSetOffsetNumber(iptr, val & ((1 << MaxHeapTuplesPerPageBits) - 1));
+	val = val >> MaxHeapTuplesPerPageBits;
+	GinItemPointerSetBlockNumber(iptr, val);
+}
+
+/*
+ * Decode varbyte-encoded integer at *ptr. *ptr is incremented to next integer.
+ */
+static uint64
+decode_varbyte(unsigned char **ptr)
+{
+	uint64		val;
+	unsigned char *p = *ptr;
+	uint64		c;
+
+	/* 1st byte */
+	c = *(p++);
+	val = c & 0x7F;
+	if (c & 0x80)
+	{
+		/* 2nd byte */
+		c = *(p++);
+		val |= (c & 0x7F) << 7;
+		if (c & 0x80)
+		{
+			/* 3rd byte */
+			c = *(p++);
+			val |= (c & 0x7F) << 14;
+			if (c & 0x80)
+			{
+				/* 4th byte */
+				c = *(p++);
+				val |= (c & 0x7F) << 21;
+				if (c & 0x80)
+				{
+					/* 5th byte */
+					c = *(p++);
+					val |= (c & 0x7F) << 28;
+					if (c & 0x80)
+					{
+						/* 6th byte */
+						c = *(p++);
+						val |= (c & 0x7F) << 35;
+						if (c & 0x80)
+						{
+							/* 7th byte, should not have continuation bit */
+							c = *(p++);
+							val |= c << 42;
+							Assert((c & 0x80) == 0);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	*ptr = p;
+
+	return val;
+}
+
+/*	Dump out gin-specific content of block */
+static void
+FormatGinBlock(char *buffer,
+		bool isToast,
+		Oid toastOid,
+		unsigned int toastExternalSize,
+		char *toastValue,
+		unsigned int *toastRead)
+{
+	Page		page = (Page) buffer;
+	char	   *indent = isToast ? "\t" : "";
+
+	if (isToast && !verbose)
+		return;
+
+	printf("%s<Data> -----\n", indent);
+
+	if (IsGinLeafPage(page))
+	{
+		if (GinPageIsCompressed(page))
+		{
+			GinPostingList *seg = GinDataLeafPageGetPostingList(page);
+			int				plist_idx = 1;
+			Size			len = GinDataLeafPageGetPostingListSize(page);
+			Pointer			endptr = ((Pointer) seg) + len;
+			ItemPointer		cur;
+
+			while ((Pointer) seg < endptr)
+			{
+				int				item_idx = 1;
+				uint64			val;
+				unsigned char  *endseg = seg->bytes + seg->nbytes;
+				unsigned char  *ptr = seg->bytes;
+
+				cur = &seg->first;
+				printf("\n%s Posting List	%3d -- Length: %4u\n",
+					   indent, plist_idx, seg->nbytes);
+				printf("%s	ItemPointer %3d -- Block Id: %4u linp Index: %4u\n",
+					   indent, item_idx,
+					   ((uint32) ((cur->ip_blkid.bi_hi << 16) |
+								  (uint16) cur->ip_blkid.bi_lo)),
+					   cur->ip_posid);
+
+				val = itemptr_to_uint64(&seg->first);
+				while (ptr < endseg)
+				{
+					val += decode_varbyte(&ptr);
+					item_idx++;
+
+					uint64_to_itemptr(val, cur);
+					printf("%s	ItemPointer %3d -- Block Id: %4u linp Index: %4u\n",
+						   indent, item_idx,
+						   ((uint32) ((cur->ip_blkid.bi_hi << 16) |
+									  (uint16) cur->ip_blkid.bi_lo)),
+						   cur->ip_posid);
+				}
+
+				plist_idx++;
+
+				seg = GinNextPostingListSegment(seg);
+			}
+
+		}
+		else
+		{
+			int			i,
+						nitems = GinPageGetOpaque(page)->maxoff;
+			ItemPointer	items = (ItemPointer) GinDataPageGetData(page);
+
+			for (i = 0; i < nitems; i++)
+			{
+				printf("%s ItemPointer %d -- Block Id: %u linp Index: %u\n",
+					   indent, i + 1,
+					   ((uint32) ((items[i].ip_blkid.bi_hi << 16) |
+								  (uint16) items[i].ip_blkid.bi_lo)),
+					   items[i].ip_posid);
+			}
+		}
+	}
+	else
+	{
+		OffsetNumber	cur,
+						high = GinPageGetOpaque(page)->maxoff;
+		PostingItem	   *pitem = NULL;
+
+		for (cur = FirstOffsetNumber; cur <= high; cur = OffsetNumberNext(cur))
+		{
+			pitem = GinDataPageGetPostingItem(page, cur);
+			printf("%s PostingItem %d -- child Block Id: (%u) Block Id: %u linp Index: %u\n",
+				   indent, cur,
+				   ((uint32) ((pitem->child_blkno.bi_hi << 16) |
+							  (uint16) pitem->child_blkno.bi_lo)),
+				   ((uint32) ((pitem->key.ip_blkid.bi_hi << 16) |
+							  (uint16) pitem->key.ip_blkid.bi_lo)),
+				   pitem->key.ip_posid);
+		}
+	}
+
+	printf("\n");
+}
+
 /*	Dump out formatted items that reside on this block */
 static void
 FormatItemBlock(char *buffer,
@@ -1002,6 +1230,25 @@ FormatItemBlock(char *buffer,
 	 * be; don't print garbage. */
 	if (IsBtreeMetaPage(page))
 		return;
+
+	/* Same as above */
+	if (IsSpGistMetaPage(page))
+		return;
+
+	/* Same as above */
+	if (IsGinMetaPage(page))
+		return;
+
+	/* Leaf pages of GIN index contain posting lists
+	 * instead of item array.
+	 */
+	if (specialType == SPEC_SECT_INDEX_GIN)
+	{
+		FormatGinBlock(buffer, isToast, toastOid,
+					   toastExternalSize, toastValue,
+					   toastRead);
+		return;
+	}
 
 	if (!isToast || verbose)
 		printf("%s<Data> -----\n", indent);
