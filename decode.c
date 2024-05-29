@@ -391,136 +391,151 @@ CopyAppendEncode(const char *str, int orig_len)
 static int
 CopyAppendNumeric(const char *buffer, int num_size)
 {
-       struct NumericData num;
+	struct NumericData *num = (struct NumericData *) malloc(num_size);
 
-       num = *(struct NumericData *)buffer;
-       if (NUMERIC_IS_SPECIAL(&num))
-       {
-               if (NUMERIC_IS_NINF(&num))
-               {
-                       CopyAppend("-Infinity");
-                       return 0;
-               }
-               if (NUMERIC_IS_PINF(&num))
-               {
-                       CopyAppend("Infinity");
-                       return 0;
-               }
-               if (NUMERIC_IS_NAN(&num))
-               {
-                       CopyAppend("NaN");
-                       return 0;
-               }
-               return -2;
-       }
-       else
-       {
-               int				sign;
-               int				weight;
-               int				dscale;
-               int				ndigits;
-               int				i;
-               char			   *str;
-               char			   *cp;
-               char			   *endcp;
-               int				d;
-               bool				putit;
-               NumericDigit		d1;
-               NumericDigit		dig;
-               NumericDigit	   *digits;
+	if (num == NULL)
+		return -2;
 
-               sign = NUMERIC_SIGN(&num);
-               weight = NUMERIC_WEIGHT(&num);
-               dscale = NUMERIC_DSCALE(&num);
+	memcpy((char *) num, buffer, num_size);
 
-               if (num_size == NUMERIC_HEADER_SIZE(&num))
-               {
-                       /* No digits - compressed zero. */
-                       CopyAppendFmt("%d", 0);
-                       return 0;
-               }
-               else
-               {
-                       ndigits = num_size / sizeof(NumericDigit);
-                       digits = (NumericDigit *)(buffer + NUMERIC_HEADER_SIZE(&num));
-                       i = (weight + 1) * DEC_DIGITS;
-                       if (i <= 0)
-                               i = 1;
+	if (NUMERIC_IS_SPECIAL(num))
+	{
+		int	result = -2;
 
-                       str = palloc(i + dscale + DEC_DIGITS + 2);
-                       cp = str;
+		if (NUMERIC_IS_NINF(num))
+		{
+			CopyAppend("-Infinity");
+			result = 0;
+		}
+		if (NUMERIC_IS_PINF(num))
+		{
+			CopyAppend("Infinity");
+			result = 0;
+		}
+		if (NUMERIC_IS_NAN(num))
+		{
+			CopyAppend("NaN");
+			result = 0;
+		}
 
-                       /*
-                        * Output a dash for negative values
-                        */
-                       if (sign == NUMERIC_NEG)
-                               *cp++ = '-';
+		free(num);
 
-                       /*
-                        * Output all digits before the decimal point
-                        */
-                       if (weight < 0)
-                       {
-                               d = weight + 1;
-                               *cp++ = '0';
-                       }
-                       else
-                       {
-                               for (d = 0; d <= weight; d++)
-                               {
-                                       dig = (d < ndigits) ? digits[d] : 0;
-                                       /* In the first digit, suppress extra leading decimal zeroes */
-                                       putit = (d > 0);
-                                               d1 = dig / 1000;
-                                       dig -= d1 * 1000;
-                                       putit |= (d1 > 0);
-                                       if (putit)
-                                               *cp++ = d1 + '0';
-                                       d1 = dig / 100;
-                                       dig -= d1 * 100;
-                                       putit |= (d1 > 0);
-                                       if (putit)
-                                               *cp++ = d1 + '0';
-                                       d1 = dig / 10;
-                                       dig -= d1 * 10;
-                                       putit |= (d1 > 0);
-                                       if (putit)
-                                               *cp++ = d1 + '0';
-                                       *cp++ = dig + '0';
-                               }
-                       }
+		return result;
+	}
+	else
+	{
+		int			sign;
+		int			weight;
+		int			dscale;
+		int			ndigits;
+		int			i;
+		char	   *str;
+		char	   *cp;
+		char	   *endcp;
+		int			d;
+		bool		putit;
+		NumericDigit d1;
+		NumericDigit dig;
+		NumericDigit *digits;
 
-                       /*
-                        * If requested, output a decimal point and all the digits that follow it.
-                        * We initially put out a multiple of DEC_DIGITS digits, then truncate if
-                        * needed.
-                        */
-                       if (dscale > 0)
-                       {
-                               *cp++ = '.';
-                               endcp = cp + dscale;
-                               for (i = 0; i < dscale; d++, i += DEC_DIGITS)
-                               {
-                                       dig = (d >= 0 && d < ndigits) ? digits[d] : 0;
-                                       d1 = dig / 1000;
-                                       dig -= d1 * 1000;
-                                       *cp++ = d1 + '0';
-                                       d1 = dig / 100;
-                                       dig -= d1 * 100;
-                                       *cp++ = d1 + '0';
-                                       d1 = dig / 10;
-                                       dig -= d1 * 10;
-                                       *cp++ = d1 + '0';
-                                       *cp++ = dig + '0';
-                               }
-                               cp = endcp;
-                       }
-                       *cp = '\0';
-                       CopyAppend(str);
-                       pfree(str);
-                       return 0;
-               }
-       }
+		sign = NUMERIC_SIGN(num);
+		weight = NUMERIC_WEIGHT(num);
+		dscale = NUMERIC_DSCALE(num);
+
+		if (num_size == NUMERIC_HEADER_SIZE(num))
+		{
+			/* No digits - compressed zero. */
+			CopyAppendFmt("%d", 0);
+			free(num);
+			return 0;
+		}
+		else
+		{
+			ndigits = num_size / sizeof(NumericDigit);
+			digits = (NumericDigit *) ((char *) num + NUMERIC_HEADER_SIZE(num));
+			i = (weight + 1) * DEC_DIGITS;
+			if (i <= 0)
+				i = 1;
+
+			str = palloc(i + dscale + DEC_DIGITS + 2);
+			cp = str;
+
+			/*
+			 * Output a dash for negative values
+			 */
+			if (sign == NUMERIC_NEG)
+				*cp++ = '-';
+
+			/*
+			 * Output all digits before the decimal point
+			 */
+			if (weight < 0)
+			{
+				d = weight + 1;
+				*cp++ = '0';
+			}
+			else
+			{
+				for (d = 0; d <= weight; d++)
+				{
+					dig = (d < ndigits) ? digits[d] : 0;
+
+					/*
+					 * In the first digit, suppress extra leading decimal
+					 * zeroes
+					 */
+					putit = (d > 0);
+					d1 = dig / 1000;
+					dig -= d1 * 1000;
+					putit |= (d1 > 0);
+					if (putit)
+						*cp++ = d1 + '0';
+					d1 = dig / 100;
+					dig -= d1 * 100;
+					putit |= (d1 > 0);
+					if (putit)
+						*cp++ = d1 + '0';
+					d1 = dig / 10;
+					dig -= d1 * 10;
+					putit |= (d1 > 0);
+					if (putit)
+						*cp++ = d1 + '0';
+					*cp++ = dig + '0';
+				}
+			}
+
+			/*
+			 * If requested, output a decimal point and all the digits that
+			 * follow it. We initially put out a multiple of DEC_DIGITS
+			 * digits, then truncate if needed.
+			 */
+			if (dscale > 0)
+			{
+				*cp++ = '.';
+				endcp = cp + dscale;
+				for (i = 0; i < dscale; d++, i += DEC_DIGITS)
+				{
+					dig = (d >= 0 && d < ndigits) ? digits[d] : 0;
+					d1 = dig / 1000;
+					dig -= d1 * 1000;
+					*cp++ = d1 + '0';
+					d1 = dig / 100;
+					dig -= d1 * 100;
+					*cp++ = d1 + '0';
+					d1 = dig / 10;
+					dig -= d1 * 10;
+					*cp++ = d1 + '0';
+					*cp++ = dig + '0';
+				}
+				cp = endcp;
+			}
+			*cp = '\0';
+			CopyAppend(str);
+			pfree(str);
+			free(num);
+			return 0;
+		}
+	}
 }
 
 /* Discard accumulated COPY line */
