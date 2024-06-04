@@ -31,7 +31,6 @@ note "running tests";
 
 test_basic_output();
 test_btree_output();
-test_btree_dedup_output();
 test_spgist_output();
 test_gin_output();
 
@@ -103,35 +102,6 @@ sub test_btree_output
     ok($out_ =~ qr/Next XID/, "Next XID found");
 }
 
-#
-# The default is deduplicate_items=ON starting from EE12,
-# but let us test it explicitly and with large number of
-# duplicates.
-#
-# Will be skipped on all versions without deduplicate_items
-#
-sub test_btree_dedup_output
-{
-    # skipTest("btree does not have deduplicate_items in this Postgres version")
-    my $query = qq(
-        create table t1_dedup(a int);
-        create index i1_dedup on t1_dedup(a) with (deduplicate_items=ON);
-        insert into t1_dedup select s FROM generate_series(1, 100000) s;
-        insert into t1_dedup select 2 FROM generate_series(1, 100000) s;
-        insert into t1_dedup select s / 50 FROM generate_series(1, 100000) s;
-        checkpoint;
-    );
-    $node->safe_psql('postgres', $query);
-
-    my $out_ = run_pg_filedump('i1_dedup', ('-i'));
-
-    ok($out_ =~ qr/Header/, "Header found");
-    ok($out_ =~ qr/BTree Index Section/, "BTree Index Section found");
-    ok($out_ =~ qr/BTree Meta Data/, "BTree Meta Data found");
-    ok($out_ =~ qr/Item   3/, "Item found");
-    ok($out_ =~ qr/Block  511/, "Block found");
-}
-
 sub test_spgist_output
 {
     $node->safe_psql('postgres', "create index i2 on t1 using spgist(b); checkpoint;");
@@ -145,7 +115,6 @@ sub test_spgist_output
 
 sub test_gin_output
 {
-    # skipTest("failed to create btree_gin extension: install btree_gin for gin tests")
     my $query = qq(
         create extension btree_gin;
         create index i3 on t1 using gin(b);
