@@ -28,7 +28,9 @@ jobs:
         run: pg-start ${{ matrix.pg }}
       - name: Check out the repo
         uses: actions/checkout@v3
+      - name: Give build directory to postgres
+        run: 'chown -R postgres: .'
       - name: Install extra build dependencies
-        run: sudo apt-get install -y liblz4-dev libipc-run-perl
+        run: apt-get install -y liblz4-dev libipc-run-perl
       - name: Build and test on PostgreSQL ${{ matrix.pg }}
-        run: PATH=$PATH:/usr/lib/postgresql/${{ matrix.pg }}/bin pg-build-test
+        run: sudo -u postgres pg-build-test
