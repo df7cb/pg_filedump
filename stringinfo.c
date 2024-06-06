@@ -8,8 +8,7 @@
 #include <string.h>
 #include <assert.h>
 
-/* 64 Kb - until pg_filedump doesn't support TOAST it doesn't need more */
-#define MaxAllocSize	((Size) (64*1024))
+#define MaxAllocSize	((Size) 0x3fffffff) /* 1 gigabyte - 1 */
 
 /*-------------------------
  * StringInfoData holds information about an extensible string.

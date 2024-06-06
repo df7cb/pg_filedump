@@ -237,15 +237,6 @@ static ParseCallbackTableItem callback_table[] =
 static StringInfoData copyString;
 static bool copyStringInitDone = false;
 
-/*
- * Temporary buffer for storing decompressed data.
- *
- * 64K should be enough in most cases. If it's not user can manually change
- * this limit. Unfortunately there is no way to know how much memory user
- * is willing to allocate.
- */
-static char decompress_tmp_buff[64 * 1024];
-
 /* Used by some PostgreSQL macro definitions */
 #if PG_VERSION_NUM < 160000
 void
@@ -302,32 +293,18 @@ CopyAppend(const char *str)
 static int
 CopyAppendEncode(const char *str, int orig_len)
 {
-	/*
-	 * Should be enough in most cases. If it's not user can manually change
-	 * this limit. Unfortunately there is no way to know how much memory user
-	 * is willing to allocate.
-	 */
-	static char tmp_buff[64 * 1024];
-
-	/* Reserve one byte for a trailing zero. */
-	const int	max_offset = sizeof(tmp_buff) - 2;
 	int			curr_offset = 0;
 	int			len = orig_len;
+	char	   *tmp_buff = malloc(2 * orig_len + 1);
+
+	if (tmp_buff == NULL)
+	{
+		perror("malloc");
+		exit(1);
+	}
 
 	while (len > 0)
 	{
-		/*
-		 * Make sure there is enough free space for at least one special
-		 * symbol and a trailing zero.
-		 */
-		if (curr_offset > max_offset - 2)
-		{
-			printf("ERROR: Unable to properly encode a string since it's too "
-				   "large (%d bytes). Try to increase tmp_buff size in CopyAppendEncode "
-				   "procedure.\n", orig_len);
-			exit(1);
-		}
-
 		/*
 		 * Since we are working with potentially corrupted data we can
 		 * encounter \0 as well.
@@ -375,6 +352,8 @@ CopyAppendEncode(const char *str, int orig_len)
 
 	tmp_buff[curr_offset] = '\0';
 	CopyAppend(tmp_buff);
+	free(tmp_buff);
+
 	return 0;
 }
 
@@ -1171,6 +1150,7 @@ extract_data(const char *buffer, unsigned int buff_size, unsigned int *out_size,
 		int						decompress_ret;
 		uint32					len = VARSIZE_4B(buffer);
 		uint32					decompressed_len = 0;
+		char				   *decompress_tmp_buff;
 #if PG_VERSION_NUM >= 140000
 		ToastCompressionId		cmid;
 #endif
@@ -1181,19 +1161,13 @@ extract_data(const char *buffer, unsigned int buff_size, unsigned int *out_size,
 		decompressed_len = VARRAWSIZE_4B_C(buffer);
 #endif
 
-
 		if (len > buff_size)
 			return -1;
 
-		if (decompressed_len > sizeof(decompress_tmp_buff))
+		if ((decompress_tmp_buff = malloc(decompressed_len)) == NULL)
 		{
-			printf("WARNING: Unable to decompress a string since it's too "
-				   "large (%d bytes after decompressing). Consider increasing "
-				   "decompress_tmp_buff size.\n", decompressed_len);
-
-			CopyAppend("(COMPRESSED)");
-			*out_size = padding + len;
-			return 0;
+			perror("malloc");
+			exit(1);
 		}
 
 #if PG_VERSION_NUM >= 140000
@@ -1228,11 +1202,13 @@ extract_data(const char *buffer, unsigned int buff_size, unsigned int *out_size,
 			printf("WARNING: Unable to decompress a string. Data is corrupted.\n");
 			CopyAppend("(COMPRESSED)");
 			*out_size = padding + len;
+			free(decompress_tmp_buff);
 			return 0;
 		}
 
 		result = parse_value(decompress_tmp_buff, decompressed_len);
 		*out_size = padding + len;
+		free(decompress_tmp_buff);
 		return result;
 	}
 
