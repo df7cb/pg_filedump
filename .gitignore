@@ -1,7 +1,9 @@
 /*.bc
 /*.heap
+/[1-9]*[0-9]
 /*.o
 /pg_filedump
 /regression.*
 /results/
+/tmp_check/
 testfile*

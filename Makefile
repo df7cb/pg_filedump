@@ -7,7 +7,7 @@ PROGRAM = pg_filedump
 OBJS = pg_filedump.o decode.o stringinfo.o
 REGRESS = datatypes float numeric xml toast
 TAP_TESTS = 1
-EXTRA_CLEAN = *.heap
+EXTRA_CLEAN = *.heap $(wildcard [1-9]???[0-9]) # testsuite leftovers
 
 PG_CONFIG ?= pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
