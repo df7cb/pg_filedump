@@ -1102,10 +1102,35 @@ extract_data(const char *buffer, unsigned int buff_size, unsigned int *out_size,
 		{
 			result = ReadStringFromToast(buffer, buff_size, out_size, parse_value);
 		}
-		else
+		else if (VARATT_IS_EXTERNAL_ONDISK(buffer))
 		{
-			CopyAppend("(TOASTED)");
+			varatt_external toast_ptr;
+			VARATT_EXTERNAL_GET_POINTER(toast_ptr, buffer);
+			if (VARATT_EXTERNAL_IS_COMPRESSED(toast_ptr))
+			{
+#if PG_VERSION_NUM >= 140000
+				switch (VARATT_EXTERNAL_GET_COMPRESS_METHOD(toast_ptr))
+				{
+					case TOAST_PGLZ_COMPRESSION_ID:
+#endif
+						CopyAppend("(TOASTED,pglz)");
+#if PG_VERSION_NUM >= 140000
+						break;
+					case TOAST_LZ4_COMPRESSION_ID:
+						CopyAppend("(TOASTED,lz4)");
+						break;
+					default:
+						CopyAppend("(TOASTED,unknown)");
+						break;
+				}
+#endif
+			}
+			else
+				CopyAppend("(TOASTED,uncompressed)");
 		}
+		/* If tag is indirect or expanded, it was stored in memory. */
+		else
+			CopyAppend("(TOASTED IN MEMORY)");
 
 		*out_size = padding + len;
 		return result;
@@ -1199,8 +1224,8 @@ extract_data(const char *buffer, unsigned int buff_size, unsigned int *out_size,
 
 		if ((decompress_ret != decompressed_len) || (decompress_ret < 0))
 		{
-			printf("WARNING: Unable to decompress a string. Data is corrupted.\n");
-			CopyAppend("(COMPRESSED)");
+			printf("WARNING: Corrupted toast data, unable to decompress.\n");
+			CopyAppend("(inline compressed, corrupted)");
 			*out_size = padding + len;
 			free(decompress_tmp_buff);
 			return 0;
@@ -1374,7 +1399,6 @@ ReadStringFromToast(const char *buffer,
 		sprintf(toast_relation_filename, "%s/%d",
 				*toast_relation_path ? toast_relation_path : ".",
 				toast_ptr.va_toastrelid);
-		printf("  Read TOAST relation %s\n", toast_relation_filename);
 		toast_rel_fp = fopen(toast_relation_filename, "rb");
 		if (!toast_rel_fp) {
 			printf("Cannot open TOAST relation %s\n",
