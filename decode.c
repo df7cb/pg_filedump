@@ -1371,7 +1371,8 @@ ReadStringFromToast(const char *buffer,
 		/* Open TOAST relation file */
 		toast_relation_path = strdup(fileName);
 		get_parent_directory(toast_relation_path);
-		sprintf(toast_relation_filename, "%s/%d", toast_relation_path,
+		sprintf(toast_relation_filename, "%s/%d",
+				*toast_relation_path ? toast_relation_path : ".",
 				toast_ptr.va_toastrelid);
 		printf("  Read TOAST relation %s\n", toast_relation_filename);
 		toast_rel_fp = fopen(toast_relation_filename, "rb");
