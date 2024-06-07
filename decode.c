@@ -1382,16 +1382,15 @@ ReadStringFromToast(const char *buffer,
 #else
 		toast_ext_size = toast_ptr.va_extsize;
 #endif
+		num_chunks = (toast_ext_size - 1) / TOAST_MAX_CHUNK_SIZE + 1;
 
 		printf("  TOAST value. Raw size: %8d, external size: %8d, "
-				"value id: %6d, toast relation id: %6d\n",
+				"value id: %6d, toast relation id: %6d, chunks: %6d\n",
 				toast_ptr.va_rawsize,
 				toast_ext_size,
 				toast_ptr.va_valueid,
-				toast_ptr.va_toastrelid);
-
-		num_chunks = (toast_ext_size - 1) / TOAST_MAX_CHUNK_SIZE + 1;
-		printf("  Number of chunks: %d\n", num_chunks);
+				toast_ptr.va_toastrelid,
+				num_chunks);
 
 		/* Open TOAST relation file */
 		toast_relation_path = strdup(fileName);

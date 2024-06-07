@@ -86,21 +86,17 @@ COPY: short inline	xxx
  Item   2 -- Length:  256  Offset: 7888 (0x1ed0)  Flags: NORMAL
 COPY: long inline uncompressed	xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
  Item   3 -- Length:   64  Offset: 7824 (0x1e90)  Flags: NORMAL
-  TOAST value. Raw size:     2804, external size:     2800, value id:  ....., toast relation id:  .....
-  Number of chunks: 2
+  TOAST value. Raw size:     2804, external size:     2800, value id:  ....., toast relation id:  ....., chunks:      2
 COPY: external uncompressed	0123456789
  Item   4 -- Length:  107  Offset: 7712 (0x1e20)  Flags: NORMAL
 COPY: inline compressed pglz	0123456789
  Item   5 -- Length:   67  Offset: 7640 (0x1dd8)  Flags: NORMAL
-  TOAST value. Raw size:   280004, external size:     3226, value id:  ....., toast relation id:  .....
-  Number of chunks: 2
+  TOAST value. Raw size:   280004, external size:     3226, value id:  ....., toast relation id:  ....., chunks:      2
 COPY: extended compressed pglz	0123456789
  Item   6 -- Length:   90  Offset: 7544 (0x1d78)  Flags: NORMAL
 COPY: inline compressed lz4	0123456789
  Item   7 -- Length:   66  Offset: 7472 (0x1d30)  Flags: NORMAL
-  TOAST value. Raw size:   700004, external size:     2772, value id:  ....., toast relation id:  .....
-  Number of chunks: 2
-
+  TOAST value. Raw size:   700004, external size:     2772, value id:  ....., toast relation id:  ....., chunks:      2
 COPY: extended compressed lz4	0123456789
 
 
