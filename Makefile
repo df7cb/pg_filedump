@@ -18,9 +18,9 @@ PATH += :$(srcdir):$(shell $(PG_CONFIG) --bindir)
 
 # avoid linking against all libs that the server links against (xml, selinux, ...)
 ifneq ($(findstring -llz4,$(LIBS)),)
-       LIBS = $(libpq_pgport) -llz4
+       LIBS = -L$(pkglibdir) -lpgcommon -lpgport -llz4
 else
-       LIBS = $(libpq_pgport)
+       LIBS = -L$(pkglibdir) -lpgcommon -lpgport
 endif
 
 DISTFILES= README.pg_filedump.md Makefile \
