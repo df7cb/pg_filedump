@@ -1402,7 +1402,7 @@ FormatItemBlock(char *buffer,
 					FormatDecode(&buffer[itemOffset], itemSize);
 				}
 
-				if (x == maxOffset)
+				if (!isToast && x == maxOffset)
 					printf("\n");
 			}
 		}
