@@ -3,7 +3,7 @@
  *				   formatting heap (data), index and control files.
  *
  * Copyright (c) 2002-2010 Red Hat, Inc.
- * Copyright (c) 2011-2023, PostgreSQL Global Development Group
+ * Copyright (c) 2011-2022, PostgreSQL Global Development Group
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +22,8 @@
  * Original Author: Patrick Macdonald <patrickm@redhat.com>
  */
 
-#define FD_VERSION	"16.0"		/* version ID of pg_filedump */
-#define FD_PG_VERSION	"PostgreSQL 8.x .. 16.x"		/* PG version it works with */
+#define FD_VERSION	"17.0"		/* version ID of pg_filedump */
+#define FD_PG_VERSION	"PostgreSQL 8.x .. 17.x"		/* PG version it works with */
 
 #include "postgres.h"
 
