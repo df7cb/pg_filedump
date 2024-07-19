@@ -1,4 +1,4 @@
--- PG14+ output in toast.out; PG13- output in toast_1.out
+-- PG14+ output in toast.out/_3.out (32-bit); PG13- output in toast_1.out/_4.out
 
 create table toast (
     description text,
