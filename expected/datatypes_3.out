@@ -711,6 +711,7 @@ COPY: \N
 --
 ----------------------------------------------------------------------------------------------
 --
+set timezone = 'Etc/UTC';
 create table timestamptz (x timestamptz);
 insert into timestamptz values ('2000-01-01 00:00'), ('100-01-01 BC 2:22'), ('infinity'), ('-infinity'), (null);
 \set relname timestamptz
@@ -744,9 +745,9 @@ Block    0 ********************************************************
 
 <Data> -----
  Item   1 -- Length:   32  Offset: 8160 (0x1fe0)  Flags: NORMAL
-COPY: 2000-01-01 08:00:00.000000+00
+COPY: 2000-01-01 00:00:00.000000+00
  Item   2 -- Length:   32  Offset: 8128 (0x1fc0)  Flags: NORMAL
-COPY: 0100-01-01 10:22:00.000000+00 BC
+COPY: 0100-01-01 02:22:00.000000+00 BC
  Item   3 -- Length:   32  Offset: 8096 (0x1fa0)  Flags: NORMAL
 COPY: infinity
  Item   4 -- Length:   32  Offset: 8064 (0x1f80)  Flags: NORMAL

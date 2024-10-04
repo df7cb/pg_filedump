@@ -84,6 +84,7 @@ insert into timestamp values ('2000-01-01 00:00'), ('100-01-01 BC 2:22'), ('infi
 \set relname timestamp
 \ir run_test.sql
 
+set timezone = 'Etc/UTC';
 create table timestamptz (x timestamptz);
 insert into timestamptz values ('2000-01-01 00:00'), ('100-01-01 BC 2:22'), ('infinity'), ('-infinity'), (null);
 \set relname timestamptz
