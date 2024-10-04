@@ -7,10 +7,12 @@ jobs:
     strategy:
       matrix:
         pg:
+          - 18
+          - 17
           - 16
           - 15
           - 14
-          # versions before 14 no not support Infinity in numeric
+          # versions before 14 no not support Infinity in numeric and lack lz4 support
           - 13
           - 12
           # versions before 12 have a different output format for floats (inf/Infinity, nan/NaN)
@@ -27,7 +29,7 @@ jobs:
       - name: Start PostgreSQL ${{ matrix.pg }}
         run: pg-start ${{ matrix.pg }}
       - name: Check out the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Give build directory to postgres
         run: 'chown -R postgres: .'
       - name: Install extra build dependencies
