@@ -3,7 +3,7 @@
  *				   formatting heap (data), index and control files.
  *
  * Copyright (c) 2002-2010 Red Hat, Inc.
- * Copyright (c) 2011-2023, PostgreSQL Global Development Group
+ * Copyright (c) 2011-2024, PostgreSQL Global Development Group
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -159,7 +159,7 @@ DisplayOptions(unsigned int validOptions)
 		printf
 			("\nVersion %s (for %s)"
 			 "\nCopyright (c) 2002-2010 Red Hat, Inc."
-		  "\nCopyright (c) 2011-2023, PostgreSQL Global Development Group\n",
+		  "\nCopyright (c) 2011-2024, PostgreSQL Global Development Group\n",
 			 FD_VERSION, FD_PG_VERSION);
 
 	printf
