@@ -430,7 +430,7 @@ CopyAppendNumeric(const char *buffer, int num_size)
 		}
 		else
 		{
-			ndigits = num_size / sizeof(NumericDigit);
+			ndigits = (num_size - NUMERIC_HEADER_SIZE(num)) / sizeof(NumericDigit);
 			digits = (NumericDigit *) ((char *) num + NUMERIC_HEADER_SIZE(num));
 			i = (weight + 1) * DEC_DIGITS;
 			if (i <= 0)
