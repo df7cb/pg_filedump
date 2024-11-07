@@ -1,8 +1,3 @@
-# View README.pg_filedump.md first
-
-# note this must match version macros in pg_filedump.h
-FD_VERSION=17.0
-
 PROGRAM = pg_filedump
 OBJS = pg_filedump.o decode.o stringinfo.o
 REGRESS = datatypes float numeric xml toast
@@ -22,14 +17,3 @@ ifneq ($(findstring -llz4,$(LIBS)),)
 else
        LIBS = -L$(pkglibdir) -lpgcommon -lpgport
 endif
-
-DISTFILES= README.pg_filedump.md Makefile \
-	pg_filedump.h pg_filedump.c decode.h decode.c stringinfo.c
-
-dist:
-	rm -rf pg_filedump-${FD_VERSION} pg_filedump-${FD_VERSION}.tar.gz
-	mkdir pg_filedump-${FD_VERSION}
-	cp -p ${DISTFILES} pg_filedump-${FD_VERSION}
-	tar cfz pg_filedump-${FD_VERSION}.tar.gz pg_filedump-${FD_VERSION}
-	rm -rf pg_filedump-${FD_VERSION}
-
