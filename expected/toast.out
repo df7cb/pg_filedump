@@ -62,7 +62,7 @@ COPY: extended compressed lz4	(TOASTED,lz4)
 
 
 *** End of File Encountered. Last Block Read: 0 ***
-\! pg_filedump -D text,text -t $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../" -e 's/id:  ...../id:  ...../g' -e 's/ 8< .*//'
+\! pg_filedump -D text,text -t $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../" -e 's/id: \+[0-9]\+,/id:  .....,/g' -e 's/ 8< .*//'
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility

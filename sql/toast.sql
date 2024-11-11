@@ -35,4 +35,4 @@ select lo_import(format('base/%s/%s', :'datoid', :'reltoastrelid')) as toast_loi
 
 \setenv relname :relname
 \! pg_filedump -D text,text $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
-\! pg_filedump -D text,text -t $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../" -e 's/id:  ...../id:  ...../g' -e 's/ 8< .*//'
+\! pg_filedump -D text,text -t $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../" -e 's/id: \+[0-9]\+,/id:  .....,/g' -e 's/ 8< .*//'
