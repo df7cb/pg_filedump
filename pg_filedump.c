@@ -3,7 +3,7 @@
  *				   formatting heap (data), index and control files.
  *
  * Copyright (c) 2002-2010 Red Hat, Inc.
- * Copyright (c) 2011-2024, PostgreSQL Global Development Group
+ * Copyright (c) 2011-2025, PostgreSQL Global Development Group
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@
 #include "storage/checksum.h"
 #include "storage/checksum_impl.h"
 #include "decode.h"
+#include <inttypes.h>
 
 /*
  * Global variables for ease of use mostly
@@ -149,6 +150,13 @@ static void FormatBinary(char *buffer,
 		unsigned int numBytes, unsigned int startIndex);
 static void DumpBinaryBlock(char *buffer);
 static int PrintRelMappings(void);
+static ItemPointer ginPostingListDecodeAllSegmentsItems(
+		GinPostingList *segment,
+		int len,
+		int *ndecoded_out);
+static ItemPointer ginReadTupleItems(
+		IndexTuple itup,
+		int *nitems);
 
 
 /* Send properly formed usage information to the user. */
@@ -825,22 +833,6 @@ IsGinMetaPage(Page page)
 	return false;
 }
 
-/*	Check whether page is a gin leaf page */
-static bool
-IsGinLeafPage(Page page)
-{
-	if ((PageGetSpecialSize(page) == (MAXALIGN(sizeof(GinPageOpaqueData))))
-		&& (bytesToFormat == blockSize))
-	{
-		GinPageOpaque gpo = GinPageGetOpaque(page);
-
-		if (gpo->flags & GIN_LEAF)
-			return true;
-	}
-
-	return false;
-}
-
 /* Check whether page is a SpGist meta page */
 static bool
 IsSpGistMetaPage(Page page)
@@ -976,6 +968,24 @@ FormatHeader(char *buffer, Page page, BlockNumber blkno, bool isToast)
 			}
 			headerBytes += sizeof(BTMetaPageData);
 		}
+		else if (IsGinMetaPage(page))
+		{
+			GinMetaPageData *gpMeta = GinPageGetMeta(buffer);
+			if (!isToast || verbose)
+			{
+				printf("%s GIN Meta Data:           Version (%u)\n",
+					indent, gpMeta->ginVersion);
+				printf("%s Pending list:            Head:    (%u)  Tail:    (%u)  Tail Free Size:    (%u)\n",
+						indent, gpMeta->head, gpMeta->tail, gpMeta->tailFreeSize);
+				printf("%s                          Num of Pending Pages:    (%u)  Num of Pending Heap Tuples:    (%" PRIu64 ")\n",
+						indent, gpMeta->nPendingPages, gpMeta->nPendingHeapTuples);
+				printf("%s Statistic for planner:   Num of Total Pages:    (%u)  Num of Entry Pages:    (%u)\n",
+						indent, gpMeta->nTotalPages, gpMeta->nEntryPages);
+				printf("%s                          Num of Data Pages:    (%u)  Num of Entries:    (%" PRIu64 ")\n\n",
+						indent, gpMeta->nDataPages, gpMeta->nEntries);
+			}
+			headerBytes += sizeof(GinMetaPageData);
+		}
 
 		/* Eye the contents of the header and alert the user to possible 
 		 * problems. */
@@ -1107,6 +1117,88 @@ decode_varbyte(unsigned char **ptr)
 	return val;
 }
 
+static ItemPointer
+ginPostingListDecodeAllSegmentsItems(GinPostingList *segment, int len, int *ndecoded_out)
+{
+	ItemPointer result;
+	int			nallocated;
+	uint64		val;
+	char	   *endseg = ((char *) segment) + len;
+	int			ndecoded;
+	unsigned char *ptr;
+	unsigned char *endptr;
+
+	/*
+	 * Guess an initial size of the array.
+	 */
+	nallocated = segment->nbytes * 2 + 1;
+	result = palloc(nallocated * sizeof(ItemPointerData));
+
+	ndecoded = 0;
+	while ((char *) segment < endseg)
+	{
+		/* enlarge output array if needed */
+		if (ndecoded >= nallocated)
+		{
+			nallocated *= 2;
+			result = repalloc(result, nallocated * sizeof(ItemPointerData));
+		}
+
+		/* copy the first item */
+		result[ndecoded] = segment->first;
+		ndecoded++;
+
+		val = itemptr_to_uint64(&segment->first);
+		ptr = segment->bytes;
+		endptr = segment->bytes + segment->nbytes;
+		while (ptr < endptr)
+		{
+			/* enlarge output array if needed */
+			if (ndecoded >= nallocated)
+			{
+				nallocated *= 2;
+				result = repalloc(result, nallocated * sizeof(ItemPointerData));
+			}
+
+			val += decode_varbyte(&ptr);
+
+			uint64_to_itemptr(val, &result[ndecoded]);
+			ndecoded++;
+		}
+		segment = GinNextPostingListSegment(segment);
+	}
+
+	if (ndecoded_out)
+		*ndecoded_out = ndecoded;
+	return result;
+}
+
+static ItemPointer
+ginReadTupleItems(IndexTuple itup, int *nitems)
+{
+	Pointer		ptr = GinGetPosting(itup);
+	int			nipd = GinGetNPosting(itup);
+	ItemPointer ipd;
+	if (GinItupIsCompressed(itup))
+	{
+		if (nipd > 0)
+		{
+			ipd = ginPostingListDecodeAllSegmentsItems((GinPostingList *)ptr, SizeOfGinPostingList((GinPostingList *)ptr), nitems);
+		}
+		else
+		{
+			ipd = palloc(0);
+		}
+	}
+	else
+	{
+		ipd = (ItemPointer) palloc(sizeof(ItemPointerData) * nipd);
+		memcpy(ipd, ptr, sizeof(ItemPointerData) * nipd);
+	}
+	*nitems = nipd;
+	return ipd;
+}
+
 /*	Dump out gin-specific content of block */
 static void
 FormatGinBlock(char *buffer,
@@ -1122,10 +1214,17 @@ FormatGinBlock(char *buffer,
 	if (isToast && !verbose)
 		return;
 
+	if (GinPageIsDeleted(page))
+	{
+		printf("%s  Deleted page.\n\n", indent);
+		return;
+	}
+
 	printf("%s<Data> -----\n", indent);
 
-	if (IsGinLeafPage(page))
+	if (GinPageIsData(page) && GinPageIsLeaf(page))
 	{
+		printf("\n%s Leaf Page of TID B-tree\n",indent);
 		if (GinPageIsCompressed(page))
 		{
 			GinPostingList *seg = GinDataLeafPageGetPostingList(page);
@@ -1133,7 +1232,6 @@ FormatGinBlock(char *buffer,
 			Size			len = GinDataLeafPageGetPostingListSize(page);
 			Pointer			endptr = ((Pointer) seg) + len;
 			ItemPointer		cur;
-
 			while ((Pointer) seg < endptr)
 			{
 				int				item_idx = 1;
@@ -1186,23 +1284,97 @@ FormatGinBlock(char *buffer,
 			}
 		}
 	}
-	else
+	else if (!GinPageIsData(page) && GinPageIsLeaf(page))
+	{
+		printf("\n%s Leaf Page of Element B-tree", indent);
+		for (int offset = FirstOffsetNumber; offset <= PageGetMaxOffsetNumber(page); offset++)
+		{
+			IndexTuple itup;
+			itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, offset));
+			if (!GinIsPostingTree(itup))
+			{
+				int nitems;
+				ItemPointer items = ginReadTupleItems(itup, &nitems);
+				printf("\n%s Posting List	%3d -- Length: %4u -- isCompressed: %d\n",
+					indent, offset, nitems, GinItupIsCompressed(itup));
+				for (int i = 0; i < nitems; i++)
+				{
+					printf("%s ItemPointer %d -- Block Id: %u linp Index: %u\n",
+							indent, i + 1,
+							((uint32) ((items[i].ip_blkid.bi_hi << 16) |
+									(uint16) items[i].ip_blkid.bi_lo)),
+							items[i].ip_posid);
+				}
+				pfree(items);
+			} else
+			{
+				BlockNumber rootPostingTree = GinGetPostingTree(itup);
+				printf("\n%s Root posting tree -- Block Id: %u\n",
+					indent, rootPostingTree);
+			}
+		}
+	}
+	else if (!GinPageIsLeaf(page) && GinPageIsData(page))
 	{
 		OffsetNumber	cur,
-						high = GinPageGetOpaque(page)->maxoff;
+						high = GinPageGetOpaque(page)->maxoff; /* number of PostingItems on GIN_DATA & ~GIN_LEAF page.*/
 		PostingItem	   *pitem = NULL;
 
+		ItemPointer rightBound = GinDataPageGetRightBound(page);
+
+		printf("%s Internal Page of TID B-tree -- Block Id: %u linp Index: %u\n",
+			indent,
+					((uint32) ((rightBound->ip_blkid.bi_hi << 16) |
+								(uint16) rightBound->ip_blkid.bi_lo)),
+					rightBound->ip_posid);
 		for (cur = FirstOffsetNumber; cur <= high; cur = OffsetNumberNext(cur))
 		{
 			pitem = GinDataPageGetPostingItem(page, cur);
-			printf("%s PostingItem %d -- child Block Id: (%u) Block Id: %u linp Index: %u\n",
+			printf("%s PostingItem %d -- child Block Id: (%u) Key Block Id: %u Key linp Index: %u\n",
 				   indent, cur,
-				   ((uint32) ((pitem->child_blkno.bi_hi << 16) |
-							  (uint16) pitem->child_blkno.bi_lo)),
-				   ((uint32) ((pitem->key.ip_blkid.bi_hi << 16) |
-							  (uint16) pitem->key.ip_blkid.bi_lo)),
-				   pitem->key.ip_posid);
+					((uint32) ((pitem->child_blkno.bi_hi << 16) |
+								(uint16) pitem->child_blkno.bi_lo)),
+					((uint32) ((pitem->key.ip_blkid.bi_hi << 16) |
+								(uint16) pitem->key.ip_blkid.bi_lo)),
+					pitem->key.ip_posid);
 		}
+	}
+	else if (GinPageIsList(page))
+	{
+		printf("\n%s Pending List Page	-- Length: %4u\n", indent, GinPageGetOpaque(page)->maxoff);
+		//Fast list index page, not compressed
+		for (OffsetNumber offset = FirstOffsetNumber; offset <= GinPageGetOpaque(page)->maxoff; offset = OffsetNumberNext(offset))
+		{
+			IndexTuple itup;
+			itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, offset));
+			printf("%s ItemPointer -- Block Id: %u linp Index: %u\n",
+					indent,
+					((uint32) ((itup->t_tid.ip_blkid.bi_hi << 16) |
+						(uint16) itup->t_tid.ip_blkid.bi_lo)),
+					itup->t_tid.ip_posid);
+		}
+	}
+	else if (GinPageGetOpaque(page)->flags == 0)
+	{
+		/*details postgrespro/src/backend/access/gin/ginentrypage::GinFormInteriorTuple,
+		 *the specified child block number is inserted into t_tid.
+		 */
+		printf("\n%s Internal Page of Element B-tree \n", indent);
+		for (OffsetNumber offset = FirstOffsetNumber; offset <= PageGetMaxOffsetNumber(page); offset = OffsetNumberNext(offset))
+		{
+			IndexTuple itup;
+			itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, offset));
+			printf("%s ItemPointer -- Block Id: %u linp Index: %u\n",
+					indent,
+					((uint32) ((itup->t_tid.ip_blkid.bi_hi << 16) |
+						(uint16) itup->t_tid.ip_blkid.bi_lo)),
+					itup->t_tid.ip_posid);
+		}
+	}
+	else
+	{
+		printf("%s  Error: Unknown page type.\n", indent);
+		exitCode = 1;
 	}
 
 	printf("\n");

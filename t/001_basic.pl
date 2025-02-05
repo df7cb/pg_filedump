@@ -18,6 +18,8 @@ $node->append_conf('postgresql.conf', 'fsync = True');
 $node->start;
 
 my $query = qq(
+    drop table if exists t1;
+    checkpoint;
     create table t1(a int, b text, c bigint, filler char(400));
     insert into t1 values (1, 'asdasd1', 29347293874234444);
     insert into t1 values (2, 'asdasd2', 29347293874234445);
@@ -28,6 +30,12 @@ my $query = qq(
 $node->safe_psql('postgres', $query);
 
 note "running tests";
+
+sub setup_test
+{
+    # for test isolation purposes
+    $node->safe_psql('postgres', $query);
+}
 
 test_basic_output();
 test_btree_output();
@@ -62,6 +70,7 @@ sub run_pg_filedump
 
 sub test_basic_output
 {
+    setup_test();
     my $out_ = run_pg_filedump('t1', ("-D", "int,text,bigint"));
 
     ok($out_ =~ qr/Header/, "Header found");
@@ -75,6 +84,7 @@ sub test_basic_output
 
 sub test_btree_output
 {
+    setup_test();
     my $query = qq(
         insert into t1 select * FROM generate_series(1, 10000);
         create index i1 on t1(b);
@@ -104,6 +114,7 @@ sub test_btree_output
 
 sub test_spgist_output
 {
+    setup_test();
     $node->safe_psql('postgres', "create index i2 on t1 using spgist(b); checkpoint;");
 
     my $out_ = run_pg_filedump('i2');
@@ -115,6 +126,7 @@ sub test_spgist_output
 
 sub test_gin_output
 {
+    setup_test();
     my $query = qq(
         create extension btree_gin;
         create index i3 on t1 using gin(b);
@@ -124,7 +136,14 @@ sub test_gin_output
 
     my $out_ = run_pg_filedump('i3');
 
-    ok($out_ =~ qr/Header/, "Header found");
+    ok($out_ =~ qr/GIN Meta Data/, "Metadata found");
+    ok($out_ =~ qr/Leaf Page of Element B-tree/, "Leaf Page of Element B-tree found");
+    ok($out_ =~ qr/Posting List	  1/, "Posting List	1 found");
+    ok($out_ =~ qr/ItemPointer 1/, "ItemPointer 1 found");
+    ok($out_ =~ qr/ItemPointer 2/, "ItemPointer 2 found");
+    ok($out_ =~ qr/Posting List	  2/, "Posting List	2 found");
+    ok($out_ =~ qr/ItemPointer 1/, "ItemPointer 3 found");
+    ok($out_ =~ qr/Posting List	  3/, "Posting List	3 found");
+    ok($out_ =~ qr/ItemPointer 1/, "ItemPointer 4 found");
     ok($out_ =~ qr/GIN Index Section/, "GIN Index Section found");
-    ok($out_ =~ qr/ItemPointer   3/, "Item found");
 }
