@@ -60,7 +60,7 @@ unsigned int specialType = SPEC_SECT_NONE;
 static bool verbose = false;
 
 /* File to dump or format */
-FILE *fp = NULL;
+static FILE *fp = NULL;
 
 /* File name for display */
 char *fileName = NULL;
