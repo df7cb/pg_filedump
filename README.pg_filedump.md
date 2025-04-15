@@ -2,7 +2,7 @@
 
 Copyright (c) 2002-2010 Red Hat, Inc.
 
-Copyright (c) 2011-2024, PostgreSQL Global Development Group
+Copyright (c) 2011-2025, PostgreSQL Global Development Group
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
