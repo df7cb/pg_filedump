@@ -1367,7 +1367,7 @@ ReadStringFromToast(const char *buffer,
 		int32		num_chunks;
 		/* Actual size of external TOASTed value */
 		int32		toast_ext_size;
-		/* Path to directory with TOAST realtion file */
+		/* Path to directory with TOAST relation file */
 		char	   *toast_relation_path;
 		/* Filename of TOAST relation file */
 		char		toast_relation_filename[MAXPGPATH];
