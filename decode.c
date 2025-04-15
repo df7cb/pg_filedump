@@ -1364,7 +1364,9 @@ ReadStringFromToast(const char *buffer,
 		varatt_external toast_ptr;
 		char	   *toast_data = NULL;
 		/* Number of chunks the TOAST data is divided into */
-		int32		num_chunks;
+		uint32		num_chunks;
+		/* Next chunk to read */
+		uint32		want_chunk_id = 0;
 		/* Actual size of external TOASTed value */
 		int32		toast_ext_size;
 		/* Path to directory with TOAST relation file */
@@ -1372,8 +1374,11 @@ ReadStringFromToast(const char *buffer,
 		/* Filename of TOAST relation file */
 		char		toast_relation_filename[MAXPGPATH];
 		FILE	   *toast_rel_fp;
+		unsigned int toast_relation_block_size;
+		unsigned int toastDataRead = 0;
 		unsigned int block_options = 0;
 		unsigned int control_options = 0;
+		int			loops = 0;
 
 		VARATT_EXTERNAL_GET_POINTER(toast_ptr, buffer);
 
@@ -1383,7 +1388,7 @@ ReadStringFromToast(const char *buffer,
 #else
 		toast_ext_size = toast_ptr.va_extsize;
 #endif
-		num_chunks = (toast_ext_size - 1) / TOAST_MAX_CHUNK_SIZE + 1;
+		num_chunks = ((toast_ext_size - 1) / TOAST_MAX_CHUNK_SIZE) + 1;
 
 		printf("  TOAST value. Raw size: %8d, external size: %8d, "
 				"value id: %6d, toast relation id: %6d, chunks: %6d\n",
@@ -1399,46 +1404,63 @@ ReadStringFromToast(const char *buffer,
 		sprintf(toast_relation_filename, "%s/%d",
 				*toast_relation_path ? toast_relation_path : ".",
 				toast_ptr.va_toastrelid);
+		free(toast_relation_path);
 		toast_rel_fp = fopen(toast_relation_filename, "rb");
 		if (!toast_rel_fp) {
 			printf("Cannot open TOAST relation %s\n",
 					toast_relation_filename);
-			result = -1;
+			return -1;
+		}
+
+		toast_relation_block_size = GetBlockSize(toast_rel_fp);
+		toast_data = malloc(toast_ptr.va_rawsize);
+
+		/* Loop until all chunks have been read */
+		while (want_chunk_id < num_chunks)
+		{
+			/* Restart at beginning of file */
+			fseek(toast_rel_fp, 0, SEEK_SET);
+
+			result = DumpFileContents(block_options,
+						control_options,
+						toast_rel_fp,
+						toast_relation_block_size,
+						-1, /* no start block */
+						-1, /* no end block */
+						true, /* is toast relation */
+						toast_ptr.va_valueid,
+						&want_chunk_id,
+						toast_ext_size,
+						toast_data,
+						&toastDataRead);
+
+			if (loops++ > num_chunks)
+			{
+				printf("Not all TOAST chunks found after scanning TOAST table %" PRIu32 " times, giving up\n",
+						num_chunks);
+				result = -1;
+			}
+
+			if (result != 0)
+				break;
+		}
+
+		fclose(toast_rel_fp);
+
+		if (result == 0)
+		{
+			if (VARATT_EXTERNAL_IS_COMPRESSED(toast_ptr))
+				result = DumpCompressedString(toast_data, toast_ext_size, parse_value);
+			else
+				result = parse_value(toast_data, toast_ext_size);
 		}
 		else
 		{
-			unsigned int toast_relation_block_size = GetBlockSize(toast_rel_fp);
-			fseek(toast_rel_fp, 0, SEEK_SET);
-			toast_data = malloc(toast_ptr.va_rawsize);
-
-			result = DumpFileContents(block_options,
-					control_options,
-					toast_rel_fp,
-					toast_relation_block_size,
-					-1, /* no start block */
-					-1, /* no end block */
-					true, /* is toast relation */
-					toast_ptr.va_valueid,
-					toast_ext_size,
-					toast_data);
-
-			if (result == 0)
-			{
-				if (VARATT_EXTERNAL_IS_COMPRESSED(toast_ptr))
-					result = DumpCompressedString(toast_data, toast_ext_size, parse_value);
-				else
-					result = parse_value(toast_data, toast_ext_size);
-			}
-			else
-			{
-				printf("Error in TOAST file.\n");
-			}
-
-			free(toast_data);
-			fclose(toast_rel_fp);
+			printf("Error in TOAST file.\n");
 		}
 
-		free(toast_relation_path);
+		free(toast_data);
+
 	}
 	/* If tag is indirect or expanded, it was stored in memory. */
 	else
@@ -1516,6 +1538,7 @@ ToastChunkDecode(const char *tuple_data,
 		Oid toast_oid,
 		Oid *read_toast_oid,
 		uint32 *chunk_id,
+		uint32 *want_chunk_id,
 		char *chunk_data,
 		unsigned int *chunk_data_size)
 {
@@ -1561,6 +1584,10 @@ ToastChunkDecode(const char *tuple_data,
 		return;
 	}
 
+	/* Not the chunk we want to read next */
+	if (*chunk_id != *want_chunk_id)
+		return;
+
 	size -= processed_size;
 	data += processed_size;
 	if (size <= 0)
@@ -1587,4 +1614,7 @@ ToastChunkDecode(const char *tuple_data,
 				"Partial data: %s\n", size, copyString.data);
 		return;
 	}
+
+	/* advance to next chunk */
+	*want_chunk_id += 1;
 }

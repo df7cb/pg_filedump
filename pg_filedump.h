@@ -154,4 +154,4 @@ unsigned int GetBlockSize(FILE *fp);
 int DumpFileContents(unsigned int blockOptions, unsigned int controlOptions,
 					 FILE *fp, unsigned int blockSize, int blockStart,
 					int blockEnd, bool isToast, Oid toastOid,
-					unsigned int toastExternalSize, char *toastValue);
+					uint32 *want_chunk_id, unsigned int toastExternalSize, char *toastValue, unsigned int *toastDataRead);

@@ -123,6 +123,7 @@ static void FormatBlock(unsigned int blockOptions,
 		unsigned int blockSize,
 		bool isToast,
 		Oid toastOid,
+		uint32 *want_chunk_id,
 		unsigned int toastExternalSize,
 		char *toastValue,
 		unsigned int *toastRead);
@@ -137,6 +138,7 @@ static void FormatItemBlock(char *buffer,
 		Page page,
 		bool isToast,
 		Oid toastOid,
+		uint32 *want_chunk_id,
 		unsigned int toastExternalSize,
 		char *toastValue,
 		unsigned int *toastRead);
@@ -1386,6 +1388,7 @@ FormatItemBlock(char *buffer,
 		Page page,
 		bool isToast,
 		Oid toastOid,
+		uint32 *want_chunk_id,
 		unsigned int toastExternalSize,
 		char *toastValue,
 		unsigned int *toastRead)
@@ -1557,13 +1560,19 @@ FormatItemBlock(char *buffer,
 					Oid read_toast_oid;
 
 					ToastChunkDecode(&buffer[itemOffset], itemSize, toastOid,
-									 &read_toast_oid, &chunkId, toastValue + *toastRead,
+									 &read_toast_oid, &chunkId, want_chunk_id, toastValue + *toastRead,
 									 &chunkSize);
 
 					if (verbose && read_toast_oid == toastOid)
-						printf("%s  Read TOAST chunk. TOAST Oid: %d, chunk id: %d, "
-							   "chunk data size: %d\n",
-							   indent, toastOid, chunkId, chunkSize);
+					{
+						if (chunkId == *want_chunk_id - 1) /* value already incremented */
+							printf("%s  Read TOAST chunk. TOAST Oid: %d, chunk id: %d, "
+								   "chunk data size: %d\n",
+								   indent, toastOid, chunkId, chunkSize);
+						else
+							printf("%s  Skipped out-of-order TOAST chunk. TOAST Oid: %d, chunk id: %d\n",
+								   indent, toastOid, chunkId);
+					}
 
 					*toastRead += chunkSize;
 
@@ -2096,6 +2105,7 @@ FormatBlock(unsigned int blockOptions,
 		unsigned int blockSize,
 		bool isToast,
 		Oid toastOid,
+		uint32 *want_chunk_id,
 		unsigned int toastExternalSize,
 		char *toastValue,
 		unsigned int *toastRead)
@@ -2132,6 +2142,7 @@ FormatBlock(unsigned int blockOptions,
 					page,
 					isToast,
 					toastOid,
+					want_chunk_id,
 					toastExternalSize,
 					toastValue,
 					toastRead);
@@ -2372,12 +2383,13 @@ DumpFileContents(unsigned int blockOptions,
 		int blockEnd,
 		bool isToast,
 		Oid toastOid,
+		uint32 *want_chunk_id,
 		unsigned int toastExternalSize,
-		char *toastValue)
+		char *toastValue,
+		unsigned int *toastDataRead)
 {
 	unsigned int	initialRead = 1;
 	unsigned int	contentsToDump = 1;
-	unsigned int	toastDataRead = 0;
 	BlockNumber		currentBlock = 0;
 	int				result = 0;
 	/* On a positive block size, allocate a local buffer to store
@@ -2419,7 +2431,7 @@ DumpFileContents(unsigned int blockOptions,
 			 * subsequent read gets the error. */
 			if (initialRead)
 				printf("Error: Premature end of file encountered.\n");
-			else if (!(blockOptions & BLOCK_BINARY))
+			else if (!(blockOptions & BLOCK_BINARY) && (!isToast || verbose))
 				printf("\n*** End of File Encountered. Last Block "
 					   "Read: %d ***\n", currentBlock - 1);
 
@@ -2445,9 +2457,10 @@ DumpFileContents(unsigned int blockOptions,
 							blockSize,
 							isToast,
 							toastOid,
+							want_chunk_id,
 							toastExternalSize,
 							toastValue,
-							&toastDataRead);
+							toastDataRead);
 				}
 			}
 		}
@@ -2468,7 +2481,7 @@ DumpFileContents(unsigned int blockOptions,
 		initialRead = 0;
 
 		/* If TOAST data is read */
-		if (isToast && toastDataRead >= toastExternalSize)
+		if (isToast && *toastDataRead >= toastExternalSize)
 			break;
 	}
 
@@ -2583,8 +2596,10 @@ main(int argv, char **argc)
 				blockEnd,
 				false /* is toast realtion */,
 				0,    /* no toast Oid */
+				NULL, /* no current TOAST chunk */
 				0,    /* no toast external size */
-				NULL  /* no out toast value */
+				NULL, /* no out toast value */
+				NULL  /* no toast value length */
 				);
 	}
 

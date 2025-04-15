@@ -78,7 +78,7 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      52 (0x0034)
  Block: Size 8192  Version    4            Upper    7476 (0x1d34)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    7                      Free Space: 7424
  Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 52
