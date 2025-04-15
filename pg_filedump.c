@@ -1554,11 +1554,13 @@ FormatItemBlock(char *buffer,
 				}
 				else if (isToast)
 				{
+					Oid read_toast_oid;
+
 					ToastChunkDecode(&buffer[itemOffset], itemSize, toastOid,
-									 &chunkId, toastValue + *toastRead,
+									 &read_toast_oid, &chunkId, toastValue + *toastRead,
 									 &chunkSize);
 
-					if (!isToast || verbose)
+					if (verbose && read_toast_oid == toastOid)
 						printf("%s  Read TOAST chunk. TOAST Oid: %d, chunk id: %d, "
 							   "chunk data size: %d\n",
 							   indent, toastOid, chunkId, chunkSize);

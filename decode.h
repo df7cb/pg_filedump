@@ -19,6 +19,7 @@ void
 ToastChunkDecode(const char* tuple_data,
 		unsigned int tuple_size,
 		Oid toast_oid,
+		Oid *read_toast_oid,
 		uint32 *chunk_id,
 		char *chunk_data,
 		unsigned int *chunk_data_size);

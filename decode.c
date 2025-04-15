@@ -1514,6 +1514,7 @@ void
 ToastChunkDecode(const char *tuple_data,
 		unsigned int tuple_size,
 		Oid toast_oid,
+		Oid *read_toast_oid,
 		uint32 *chunk_id,
 		char *chunk_data,
 		unsigned int *chunk_data_size)
@@ -1522,14 +1523,13 @@ ToastChunkDecode(const char *tuple_data,
 	const char	   *data = tuple_data + header->t_hoff;
 	unsigned int	size = tuple_size - header->t_hoff;
 	unsigned int	processed_size = 0;
-	Oid				read_toast_oid;
 	int				ret;
 
 	*chunk_data_size = 0;
 	*chunk_id = 0;
 
 	/* decode toast_id */
-	ret = DecodeOidBinary(data, size, &processed_size, &read_toast_oid);
+	ret = DecodeOidBinary(data, size, &processed_size, read_toast_oid);
 	if (ret < 0)
 	{
 		printf("Error: unable to decode a TOAST tuple toast_id, "
@@ -1548,7 +1548,7 @@ ToastChunkDecode(const char *tuple_data,
 	}
 
 	/* It is not what we are looking for */
-	if (toast_oid != read_toast_oid)
+	if (toast_oid != *read_toast_oid)
 		return;
 
 	/* decode chunk_id */
