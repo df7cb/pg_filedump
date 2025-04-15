@@ -10,7 +10,7 @@ insert into "int,text" values (1, 'one'), (null, 'two'), (3, null), (4, 'four');
 \ir run_test.sql
 
 -- do one test without options
-\! pg_filedump int,text.heap | sed -e 's/logid      ./logid      ./' -e 's/recoff 0x......../recoff 0x......../'
+\! pg_filedump int,text.heap | ./sed.sh
 
 ----------------------------------------------------------------------------------------------
 

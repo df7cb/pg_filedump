@@ -14,7 +14,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -27,9 +27,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
  Block: Size 8192  Version    4            Upper    8056 (0x1f78)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    4                      Free Space: 8016
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 40
 
 <Data> -----
@@ -48,7 +48,7 @@ COPY: 4	four
 ----------------------------------------------------------------------------------------------
 --
 -- do one test without options
-\! pg_filedump int,text.heap | sed -e 's/logid      ./logid      ./' -e 's/recoff 0x......../recoff 0x......../'
+\! pg_filedump int,text.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -61,9 +61,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
  Block: Size 8192  Version    4            Upper    8056 (0x1f78)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    4                      Free Space: 8016
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 40
 
 <Data> -----
@@ -88,7 +88,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -101,9 +101,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
  Block: Size 8192  Version    4            Upper    8072 (0x1f88)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    4                      Free Space: 8032
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 40
 
 <Data> -----
@@ -134,7 +134,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -147,9 +147,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      36 (0x0024)
  Block: Size 8192  Version    4            Upper    8104 (0x1fa8)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    3                      Free Space: 8068
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 36
 
 <Data> -----
@@ -178,7 +178,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -191,9 +191,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      32 (0x0020)
  Block: Size 8192  Version    4            Upper    8136 (0x1fc8)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    2                      Free Space: 8104
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 32
 
 <Data> -----
@@ -220,7 +220,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -233,9 +233,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      36 (0x0024)
  Block: Size 8192  Version    4            Upper    8104 (0x1fa8)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    3                      Free Space: 8068
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 36
 
 <Data> -----
@@ -264,7 +264,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -277,9 +277,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      52 (0x0034)
  Block: Size 8192  Version    4            Upper    7976 (0x1f28)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    7                      Free Space: 7924
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 52
 
 <Data> -----
@@ -316,7 +316,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -329,9 +329,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
  Block: Size 8192  Version    4            Upper    8072 (0x1f88)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    4                      Free Space: 8032
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 40
 
 <Data> -----
@@ -362,7 +362,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -375,9 +375,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      44 (0x002c)
  Block: Size 8192  Version    4            Upper    8032 (0x1f60)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    5                      Free Space: 7988
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 44
 
 <Data> -----
@@ -410,7 +410,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -423,9 +423,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      32 (0x0020)
  Block: Size 8192  Version    4            Upper    8136 (0x1fc8)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    2                      Free Space: 8104
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 32
 
 <Data> -----
@@ -452,7 +452,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -465,9 +465,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      36 (0x0024)
  Block: Size 8192  Version    4            Upper    7992 (0x1f38)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    3                      Free Space: 7956
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 36
 
 <Data> -----
@@ -496,7 +496,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -509,9 +509,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
  Block: Size 8192  Version    4            Upper    8072 (0x1f88)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    4                      Free Space: 8032
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 40
 
 <Data> -----
@@ -542,7 +542,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -555,9 +555,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
  Block: Size 8192  Version    4            Upper    8072 (0x1f88)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    4                      Free Space: 8032
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 40
 
 <Data> -----
@@ -588,7 +588,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -601,9 +601,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      32 (0x0020)
  Block: Size 8192  Version    4            Upper    8128 (0x1fc0)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    2                      Free Space: 8096
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 32
 
 <Data> -----
@@ -630,7 +630,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -643,9 +643,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
  Block: Size 8192  Version    4            Upper    8072 (0x1f88)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    4                      Free Space: 8032
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 40
 
 <Data> -----
@@ -676,7 +676,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -689,9 +689,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      44 (0x002c)
  Block: Size 8192  Version    4            Upper    8040 (0x1f68)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    5                      Free Space: 7996
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 44
 
 <Data> -----
@@ -725,7 +725,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -738,9 +738,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      44 (0x002c)
  Block: Size 8192  Version    4            Upper    8040 (0x1f68)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    5                      Free Space: 7996
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 44
 
 <Data> -----
@@ -773,7 +773,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -786,9 +786,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      44 (0x002c)
  Block: Size 8192  Version    4            Upper    8008 (0x1f48)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    5                      Free Space: 7964
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 44
 
 <Data> -----
@@ -821,7 +821,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -834,9 +834,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      36 (0x0024)
  Block: Size 8192  Version    4            Upper    8088 (0x1f98)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    3                      Free Space: 8052
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 36
 
 <Data> -----
@@ -865,7 +865,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -878,9 +878,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      36 (0x0024)
  Block: Size 8192  Version    4            Upper    8096 (0x1fa0)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    3                      Free Space: 8060
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 36
 
 <Data> -----
@@ -909,7 +909,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -922,9 +922,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      36 (0x0024)
  Block: Size 8192  Version    4            Upper    8096 (0x1fa0)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    3                      Free Space: 8060
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 36
 
 <Data> -----
@@ -953,7 +953,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -966,9 +966,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      40 (0x0028)
  Block: Size 8192  Version    4            Upper    8072 (0x1f88)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    4                      Free Space: 8032
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 40
 
 <Data> -----

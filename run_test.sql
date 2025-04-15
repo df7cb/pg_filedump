@@ -9,7 +9,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \lo_export :oid :output
 
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 --
 ----------------------------------------------------------------------------------------------

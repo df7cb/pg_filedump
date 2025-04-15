@@ -15,7 +15,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -28,9 +28,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      48 (0x0030)
  Block: Size 8192  Version    4            Upper    8028 (0x1f5c)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    6                      Free Space: 7980
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 48
 
 <Data> -----
@@ -65,7 +65,7 @@ select lo_import(format('base/%s/%s', :'datoid', :'relfilenode')) as oid \gset
 \set output :relname '.heap'
 \lo_export :oid :output
 \setenv relname :relname
-\! pg_filedump -D $relname $relname.heap | sed -e "s/logid      ./logid      ./" -e "s/recoff 0x......../recoff 0x......../"
+\! pg_filedump -D $relname $relname.heap | ./sed.sh
 
 *******************************************************************
 * PostgreSQL File/Block Formatted Dump Utility
@@ -78,9 +78,9 @@ Block    0 ********************************************************
 <Header> -----
  Block Offset: 0x00000000         Offsets: Lower      48 (0x0030)
  Block: Size 8192  Version    4            Upper    8008 (0x1f48)
- LSN:  logid      . recoff 0x........      Special  8192 (0x2000)
+ LSN:  logid ...... recoff 0x........      Special  8192 (0x2000)
  Items:    6                      Free Space: 7960
- Checksum: 0x0000  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
+ Checksum: 0x....  Prune XID: 0x00000000  Flags: 0x0004 (ALL_VISIBLE)
  Length (including item array): 48
 
 <Data> -----
