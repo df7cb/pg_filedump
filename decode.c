@@ -19,6 +19,7 @@
 #endif
 #include <datatype/timestamp.h>
 #include <common/pg_lzcompress.h>
+#include <inttypes.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -763,7 +764,7 @@ decode_time(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 	timestamp_sec = timestamp / 1000000;
 	*out_size = sizeof(int64) + delta;
 
-	CopyAppendFmt("%02" INT64_MODIFIER "d:%02" INT64_MODIFIER "d:%02" INT64_MODIFIER "d.%06" INT64_MODIFIER "d",
+	CopyAppendFmt("%02" PRIu64 ":%02" PRIu64 ":%02" PRIu64 ".%06" PRIu64,
 				  timestamp_sec / 60 / 60, (timestamp_sec / 60) % 60, timestamp_sec % 60,
 				  timestamp % 1000000);
 
@@ -796,7 +797,7 @@ decode_timetz(const char *buffer, unsigned int buff_size, unsigned int *out_size
 	tz_min = -(tz_sec / 60);
 	*out_size = sizeof(int64) + sizeof(int32) + delta;
 
-	CopyAppendFmt("%02" INT64_MODIFIER "d:%02" INT64_MODIFIER "d:%02" INT64_MODIFIER "d.%06" INT64_MODIFIER "d%c%02d:%02d",
+	CopyAppendFmt("%02" PRIu64 ":%02" PRIu64 ":%02" PRIu64 ".%06" PRIu64 "%c%02d:%02d",
 				  timestamp_sec / 60 / 60, (timestamp_sec / 60) % 60, timestamp_sec % 60,
 				  timestamp % 1000000, (tz_min > 0 ? '+' : '-'), abs(tz_min / 60), abs(tz_min % 60));
 
@@ -898,7 +899,7 @@ decode_timestamp_internal(const char *buffer, unsigned int buff_size, unsigned i
 	j2date(jd, &year, &month, &day);
 	timestamp_sec = timestamp / 1000000;
 
-	CopyAppendFmt("%04d-%02d-%02d %02" INT64_MODIFIER "d:%02" INT64_MODIFIER "d:%02" INT64_MODIFIER "d.%06" INT64_MODIFIER "d%s%s",
+	CopyAppendFmt("%04d-%02d-%02d %02" PRIu64 ":%02" PRIu64 ":%02" PRIu64 ".%06" PRIu64 "%s%s",
 				  (year <= 0) ? -year + 1 : year, month, day,
 				  timestamp_sec / 60 / 60, (timestamp_sec / 60) % 60, timestamp_sec % 60,
 				  timestamp % 1000000,
