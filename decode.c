@@ -725,7 +725,7 @@ decode_uint(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 static int
 decode_bigint(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 {
-	const char *new_buffer = (const char *) LONGALIGN(buffer);
+	const char *new_buffer = (const char *) DOUBLEALIGN(buffer);
 	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
 
 	if (buff_size < delta)
@@ -746,7 +746,7 @@ decode_bigint(const char *buffer, unsigned int buff_size, unsigned int *out_size
 static int
 decode_time(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 {
-	const char *new_buffer = (const char *) LONGALIGN(buffer);
+	const char *new_buffer = (const char *) DOUBLEALIGN(buffer);
 	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
 	int64		timestamp,
 				timestamp_sec;
@@ -775,7 +775,7 @@ decode_time(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 static int
 decode_timetz(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 {
-	const char *new_buffer = (const char *) LONGALIGN(buffer);
+	const char *new_buffer = (const char *) DOUBLEALIGN(buffer);
 	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
 	int64		timestamp,
 				timestamp_sec;
@@ -851,7 +851,7 @@ decode_date(const char *buffer, unsigned int buff_size, unsigned int *out_size)
 static int
 decode_timestamp_internal(const char *buffer, unsigned int buff_size, unsigned int *out_size, bool with_timezone)
 {
-	const char *new_buffer = (const char *) LONGALIGN(buffer);
+	const char *new_buffer = (const char *) DOUBLEALIGN(buffer);
 	unsigned int delta = (unsigned int) ((uintptr_t) new_buffer - (uintptr_t) buffer);
 	int64		timestamp,
 				timestamp_sec;
