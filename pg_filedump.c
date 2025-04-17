@@ -1531,7 +1531,7 @@ FormatItemBlock(char *buffer,
 						   indent, indent, blockSize, bytesToFormat, itemOffset + itemSize);
 				exitCode = 1;
 			}
-			else
+			else if (itemFlags != LP_UNUSED)
 			{
 				HeapTupleHeader tuple_header;
 				TransactionId xmax;
@@ -1584,10 +1584,10 @@ FormatItemBlock(char *buffer,
 					/* Decode tuple data */
 					FormatDecode(&buffer[itemOffset], itemSize);
 				}
-
-				if (!isToast && x == maxOffset)
-					printf("\n");
 			}
+
+			if (!isToast && x == maxOffset)
+				printf("\n");
 		}
 	}
 }
@@ -1631,7 +1631,7 @@ FormatItem(char *buffer, unsigned int numBytes, unsigned int startIndex,
 
 			if (numBytes != IndexTupleSize(itup))
 			{
-				printf("  Error: Item size difference. Given <%u>, "
+				printf("  Error: Index item size difference. Given <%u>, "
 					   "Internal <%d>.\n", numBytes, (int) IndexTupleSize(itup));
 				exitCode = 1;
 			}
@@ -1660,7 +1660,7 @@ FormatItem(char *buffer, unsigned int numBytes, unsigned int startIndex,
 
 			if (numBytes != itup->size)
 			{
-				printf("  Error: Item size difference. Given <%u>, "
+				printf("  Error: SPGiST inner item size difference. Given <%u>, "
 					   "Internal <%d>.\n", numBytes, (int) itup->size);
 				exitCode = 1;
 			}
@@ -1733,7 +1733,7 @@ FormatItem(char *buffer, unsigned int numBytes, unsigned int startIndex,
 
 			if (numBytes != itup->size)
 			{
-				printf("  Error: Item size difference. Given <%u>, "
+				printf("  Error: SPGiST leaf item size difference. Given <%u>, "
 					   "Internal <%d>.\n", numBytes, (int) itup->size);
 				exitCode = 1;
 			}
