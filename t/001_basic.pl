@@ -103,6 +103,12 @@ sub test_btree_output
     ok($out_ =~ qr/Level/, "Level found");
     ok($out_ !~ qr/Next XID/, "Next XID not found");
 
+    my $version = $node->safe_psql('postgres', 'show server_version_num');
+    if ($version >= 130000)
+    {
+        like($out_, qr/Posting Length: \d+/, "Posting Length found");
+    }
+
     # make leaf with BTP_DELETED flag
     $node->safe_psql('postgres', "delete from t1 where a >= 2000 and a < 4000;");
     $node->safe_psql('postgres', "vacuum t1; checkpoint;");

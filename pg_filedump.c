@@ -1621,13 +1621,19 @@ FormatItem(char *buffer, unsigned int numBytes, unsigned int startIndex,
 			IndexTuple	itup = (IndexTuple) (&(buffer[startIndex]));
 
 			printf("  Block Id: %u  linp Index: %u  Size: %d\n"
-				   "  Has Nulls: %u  Has Varwidths: %u\n\n",
+				   "  Has Nulls: %u  Has Varwidths: %u",
 				   ((uint32) ((itup->t_tid.ip_blkid.bi_hi << 16) |
 							  (uint16) itup->t_tid.ip_blkid.bi_lo)),
 				   itup->t_tid.ip_posid,
 				   (int) IndexTupleSize(itup),
 				   IndexTupleHasNulls(itup) ? 1 : 0,
 				   IndexTupleHasVarwidths(itup) ? 1 : 0);
+
+#if PG_VERSION_NUM >= 130000
+			if (BTreeTupleIsPosting(itup))
+				printf("  Posting Length: %u", BTreeTupleGetNPosting(itup));
+#endif
+			printf("\n\n");
 
 			if (numBytes != IndexTupleSize(itup))
 			{
