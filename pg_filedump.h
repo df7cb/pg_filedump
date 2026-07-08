@@ -23,7 +23,7 @@
  */
 
 #define FD_VERSION	"17.4"		/* version ID of pg_filedump */
-#define FD_PG_VERSION	"PostgreSQL 8.x .. 17.x"		/* PG version it works with */
+#define FD_PG_VERSION	"PostgreSQL 8.x .. 19.x"		/* PG version it works with */
 
 #include "postgres.h"
 
