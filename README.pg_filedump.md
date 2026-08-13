@@ -90,7 +90,9 @@ The following options are valid for control files:
 Additional functions:
   -m  Interpret file as pg_filenode.map file and print contents (all
       other options will be ignored)
-
+  -F  Interpret file as FSM (Free Space Map) file\n" 
+  -V  Interpret file as VM (Visibility Map) file\n"
+  
 Report bugs to <pgsql-bugs@postgresql.org>
 ```
 

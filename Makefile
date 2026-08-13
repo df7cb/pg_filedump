@@ -1,5 +1,5 @@
 PROGRAM = pg_filedump
-OBJS = pg_filedump.o decode.o stringinfo.o
+OBJS = pg_filedump.o decode.o stringinfo.o pg_fsm.o pg_vm.o
 REGRESS = datatypes float numeric xml toast
 TAP_TESTS = 1
 EXTRA_CLEAN = *.heap $(wildcard [1-9]???[0-9]) # testsuite leftovers
